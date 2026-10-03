@@ -1,0 +1,43 @@
+// Sales Service Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  UPI
+  OTHER
+}
+
+model Sale {
+  id            String        @id @default(uuid())
+  invoiceNumber String        @unique @map("invoice_number")
+  totalAmount   Decimal       @map("total_amount") @db.Decimal(10, 2)
+  paymentMethod PaymentMethod @default(CASH) @map("payment_method")
+  soldBy        String        @map("sold_by")
+  notes         String?
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  items         SaleItem[]
+
+  @@map("sales")
+}
+
+model SaleItem {
+  id                 String   @id @default(uuid())
+  saleId             String   @map("sale_id")
+  sale               Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  bottleSerialNumber String   @map("bottle_serial_number")
+  productId          String   @map("product_id")
+  unitPrice          Decimal  @map("unit_price") @db.Decimal(10, 2)
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@index([bottleSerialNumber])
+  @@map("sale_items")
+}

@@ -1,0 +1,118 @@
+// Inventory Service Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BottleStatus {
+  IN_STOCK
+  SOLD
+  DAMAGED
+  RETURNED
+  ADJUSTED
+}
+
+enum StockEntryStatus {
+  COMPLETED
+  CANCELLED
+}
+
+model Brand {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+
+  @@map("brands")
+}
+
+model Product {
+  id                 String       @id @default(uuid())
+  brandId            String       @map("brand_id")
+  brand              Brand        @relation(fields: [brandId], references: [id])
+  name               String
+  bottleVolume       String       @map("bottle_volume")
+  bottlesPerBox      Int          @map("bottles_per_box")
+  defaultBottlePrice Decimal      @map("default_bottle_price") @db.Decimal(10, 2)
+  defaultBoxPrice    Decimal      @map("default_box_price") @db.Decimal(10, 2)
+  isActive           Boolean      @default(true) @map("is_active")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+  stockEntries       StockEntry[]
+  bottles            Bottle[]
+
+  @@unique([brandId, name, bottleVolume])
+  @@map("products")
+}
+
+model StockEntry {
+  id            String           @id @default(uuid())
+  productId     String           @map("product_id")
+  product       Product          @relation(fields: [productId], references: [id])
+  numberOfBoxes Int              @map("number_of_boxes")
+  bottlesPerBox Int              @map("bottles_per_box")
+  totalBottles  Int              @map("total_bottles")
+  boxPrice      Decimal          @map("box_price") @db.Decimal(10, 2)
+  bottlePrice   Decimal          @map("bottle_price") @db.Decimal(10, 2)
+  status        StockEntryStatus @default(COMPLETED)
+  notes         String?
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  boxes         Box[]
+  bottles       Bottle[]
+
+  @@map("stock_entries")
+}
+
+model Box {
+  id           String     @id @default(uuid())
+  stockEntryId String     @map("stock_entry_id")
+  stockEntry   StockEntry @relation(fields: [stockEntryId], references: [id], onDelete: Cascade)
+  boxNumber    Int        @map("box_number")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  bottles      Bottle[]
+
+  @@unique([stockEntryId, boxNumber])
+  @@map("boxes")
+}
+
+model Bottle {
+  id               String            @id @default(uuid())
+  serialNumber     String            @unique @map("serial_number")
+  boxId            String            @map("box_id")
+  box              Box               @relation(fields: [boxId], references: [id], onDelete: Cascade)
+  stockEntryId     String            @map("stock_entry_id")
+  stockEntry       StockEntry        @relation(fields: [stockEntryId], references: [id])
+  productId        String            @map("product_id")
+  product          Product           @relation(fields: [productId], references: [id])
+  bottlePrice      Decimal           @map("bottle_price") @db.Decimal(10, 2)
+  status           BottleStatus      @default(IN_STOCK)
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  stockAdjustments StockAdjustment[]
+
+  @@index([serialNumber])
+  @@index([status])
+  @@index([productId, status])
+  @@map("bottles")
+}
+
+model StockAdjustment {
+  id             String       @id @default(uuid())
+  bottleId       String       @map("bottle_id")
+  bottle         Bottle       @relation(fields: [bottleId], references: [id])
+  previousStatus BottleStatus @map("previous_status")
+  newStatus      BottleStatus @map("new_status")
+  reason         String
+  adjustedBy     String       @map("adjusted_by")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@map("stock_adjustments")
+}
