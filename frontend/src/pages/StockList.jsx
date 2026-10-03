@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import apiClient from '../api/client';
 import { Link } from 'react-router-dom';
-import { Box, Search, Eye, Barcode, AlertTriangle } from 'lucide-react';
+import { Box, Search, Eye, Barcode, AlertTriangle, Trash2 } from 'lucide-react';
 
 const StockList = () => {
   const [entries, setEntries] = useState([]);
@@ -25,9 +25,18 @@ const StockList = () => {
     }
   };
 
-  useEffect(() => {
-    fetchStockEntries();
-  }, []);
+  const handleDelete = async (entry) => {
+    if (!window.confirm(`Are you sure you want to cancel and delete stock entry for '${entry.product?.name}' (${entry.totalBottles} bottles)?`)) {
+      return;
+    }
+
+    try {
+      await apiClient.delete(`/inventory/stock/entries/${entry.id}`);
+      fetchStockEntries();
+    } catch (err) {
+      alert(err?.message || 'Failed to delete stock entry. Entries with sold or adjusted bottles cannot be deleted.');
+    }
+  };
 
   const handleSerialSearch = async (e) => {
     e.preventDefault();
@@ -150,7 +159,7 @@ const StockList = () => {
                     <td className="px-6 py-4 text-right text-xs text-slate-400 font-mono">
                       {new Date(entry.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right space-x-2">
                       <Link
                         to={`/stock/details/${entry.id}`}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-semibold rounded-lg transition-colors"
@@ -158,6 +167,13 @@ const StockList = () => {
                         <Eye className="w-3.5 h-3.5" />
                         View Serials
                       </Link>
+                      <button
+                        onClick={() => handleDelete(entry)}
+                        className="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/80 text-rose-400 transition-colors border border-rose-800/40"
+                        title="Delete Unused Stock Entry"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}

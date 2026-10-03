@@ -252,10 +252,58 @@ const toggleProductStatus = async (req, res, next) => {
   }
 };
 
+// Delete product
+const deleteProduct = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            bottles: true,
+            stockEntries: true
+          }
+        }
+      }
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
+        error: 'PRODUCT_NOT_FOUND'
+      });
+    }
+
+    if (product._count.bottles > 0 || product._count.stockEntries > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete product '${product.name}': it has ${product._count.stockEntries} stock entry(ies) and ${product._count.bottles} registered bottle(s). Deactivate the product instead.`,
+        error: 'PRODUCT_HAS_STOCK'
+      });
+    }
+
+    await prisma.product.delete({
+      where: { id }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Product '${product.name}' deleted successfully`,
+      data: null
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createProduct,
   getProducts,
   getProductById,
   updateProduct,
-  toggleProductStatus
+  toggleProductStatus,
+  deleteProduct
 };

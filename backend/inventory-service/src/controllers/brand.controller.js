@@ -199,10 +199,55 @@ const toggleBrandStatus = async (req, res, next) => {
   }
 };
 
+// Delete brand
+const deleteBrand = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const brand = await prisma.brand.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { products: true }
+        }
+      }
+    });
+
+    if (!brand) {
+      return res.status(404).json({
+        success: false,
+        message: 'Brand not found',
+        error: 'BRAND_NOT_FOUND'
+      });
+    }
+
+    if (brand._count.products > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete brand '${brand.name}': it has ${brand._count.products} associated product(s). Please delete or reassign products first.`,
+        error: 'BRAND_HAS_PRODUCTS'
+      });
+    }
+
+    await prisma.brand.delete({
+      where: { id }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Brand '${brand.name}' deleted successfully`,
+      data: null
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createBrand,
   getBrands,
   getBrandById,
   updateBrand,
-  toggleBrandStatus
+  toggleBrandStatus,
+  deleteBrand
 };

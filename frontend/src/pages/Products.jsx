@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import apiClient from '../api/client';
-import { Plus, Search, Edit2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Plus, Search, Edit2, CheckCircle, XCircle, AlertCircle, Trash2 } from 'lucide-react';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -121,6 +121,19 @@ const Products = () => {
     }
   };
 
+  const handleDelete = async (p) => {
+    if (!window.confirm(`Are you sure you want to delete product '${p.name}'?`)) {
+      return;
+    }
+
+    try {
+      await apiClient.delete(`/inventory/products/${p.id}`);
+      fetchProducts();
+    } catch (err) {
+      alert(err?.message || 'Failed to delete product.');
+    }
+  };
+
   return (
     <Layout title="Product Management">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -218,6 +231,13 @@ const Products = () => {
                         }`}
                       >
                         {p.isActive ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p)}
+                        className="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/80 text-rose-400 transition-colors border border-rose-800/40"
+                        title="Delete Product"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>

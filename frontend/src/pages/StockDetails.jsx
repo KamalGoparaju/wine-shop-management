@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import apiClient from '../api/client';
-import { ArrowLeft, Box, Barcode, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Box, Barcode, CheckCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const StockDetails = () => {
@@ -69,6 +69,19 @@ const StockDetails = () => {
     }
   };
 
+  const handleDeleteEntry = async () => {
+    if (!window.confirm(`Are you sure you want to cancel and delete this entire stock entry (${entry.totalBottles} bottles)?`)) {
+      return;
+    }
+
+    try {
+      await apiClient.delete(`/inventory/stock/entries/${entry.id}`);
+      window.location.href = '/stock/list';
+    } catch (err) {
+      alert(err?.message || 'Cannot delete stock entry: some bottles have already been sold or modified.');
+    }
+  };
+
   if (loading) {
     return (
       <Layout title="Stock Entry Details">
@@ -95,6 +108,13 @@ const StockDetails = () => {
           <ArrowLeft className="w-4 h-4" />
           Back to Stock List
         </Link>
+        <button
+          onClick={handleDeleteEntry}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-rose-950/50 hover:bg-rose-900/80 text-rose-400 text-xs font-semibold rounded-xl border border-rose-800/40 transition-colors"
+        >
+          <Trash2 className="w-4 h-4" />
+          Delete Stock Entry
+        </button>
       </div>
 
       {/* Summary Card */}

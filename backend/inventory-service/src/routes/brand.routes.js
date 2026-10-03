@@ -4,7 +4,8 @@ const {
   getBrands,
   getBrandById,
   updateBrand,
-  toggleBrandStatus
+  toggleBrandStatus,
+  deleteBrand
 } = require('../controllers/brand.controller');
 
 const router = express.Router();
@@ -14,5 +15,6 @@ router.get('/', getBrands);
 router.get('/:id', getBrandById);
 router.put('/:id', updateBrand);
 router.patch('/:id/status', toggleBrandStatus);
+router.delete('/:id', deleteBrand);
 
 module.exports = router;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import apiClient from '../api/client';
-import { Plus, Search, Edit2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Plus, Search, Edit2, CheckCircle, XCircle, AlertCircle, Trash2 } from 'lucide-react';
 
 const Brands = () => {
   const [brands, setBrands] = useState([]);
@@ -74,6 +74,19 @@ const Brands = () => {
       fetchBrands();
     } catch (err) {
       alert(err?.message || 'Failed to toggle brand status.');
+    }
+  };
+
+  const handleDelete = async (b) => {
+    if (!window.confirm(`Are you sure you want to delete brand '${b.name}'?`)) {
+      return;
+    }
+
+    try {
+      await apiClient.delete(`/inventory/brands/${b.id}`);
+      fetchBrands();
+    } catch (err) {
+      alert(err?.message || 'Failed to delete brand.');
     }
   };
 
@@ -156,6 +169,13 @@ const Brands = () => {
                         }`}
                       >
                         {b.isActive ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(b)}
+                        className="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/80 text-rose-400 transition-colors border border-rose-800/40"
+                        title="Delete Brand"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>
