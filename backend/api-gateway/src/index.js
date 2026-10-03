@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const proxy = require('express-http-proxy');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 require('dotenv').config();
 
 const { verifyGatewayToken } = require('./middleware/auth.middleware');
@@ -37,47 +37,22 @@ app.get('/', (req, res) => {
   });
 });
 
-// Proxy routes
 // Auth Service Proxy
-app.use('/api/auth', proxy(AUTH_SERVICE_URL, {
-  proxyReqPathResolver: (req) => {
-    return `/auth${req.url}`;
-  },
-  proxyErrorHandler: (err, res, next) => {
-    res.status(503).json({
-      success: false,
-      message: 'Auth Service is unavailable',
-      error: 'AUTH_SERVICE_UNAVAILABLE'
-    });
-  }
+app.use('/api/auth', createProxyMiddleware({
+  target: AUTH_SERVICE_URL,
+  changeOrigin: true
 }));
 
 // Inventory Service Proxy (Protected)
-app.use('/api/inventory', verifyGatewayToken, proxy(INVENTORY_SERVICE_URL, {
-  proxyReqPathResolver: (req) => {
-    return req.url;
-  },
-  proxyErrorHandler: (err, res, next) => {
-    res.status(503).json({
-      success: false,
-      message: 'Inventory Service is unavailable',
-      error: 'INVENTORY_SERVICE_UNAVAILABLE'
-    });
-  }
+app.use('/api/inventory', verifyGatewayToken, createProxyMiddleware({
+  target: INVENTORY_SERVICE_URL,
+  changeOrigin: true
 }));
 
 // Sales Service Proxy (Protected)
-app.use('/api/sales', verifyGatewayToken, proxy(SALES_SERVICE_URL, {
-  proxyReqPathResolver: (req) => {
-    return req.url;
-  },
-  proxyErrorHandler: (err, res, next) => {
-    res.status(503).json({
-      success: false,
-      message: 'Sales Service is unavailable',
-      error: 'SALES_SERVICE_UNAVAILABLE'
-    });
-  }
+app.use('/api/sales', verifyGatewayToken, createProxyMiddleware({
+  target: SALES_SERVICE_URL,
+  changeOrigin: true
 }));
 
 // Global Error Handler

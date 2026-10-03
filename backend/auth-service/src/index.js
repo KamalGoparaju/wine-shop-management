@@ -21,16 +21,16 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Auth Routes
+// Auth Routes - Mount on multiple base paths for proxy flexibility
 app.use('/auth', authRoutes);
-app.use('/api/auth', authRoutes); // Direct access compatibility
+app.use('/api/auth', authRoutes);
+app.use('/', authRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
 
 app.listen(PORT, async () => {
   console.log(`Auth Service running on port ${PORT}`);
-  // Run seed check when database is available
   if (process.env.NODE_ENV !== 'test') {
     await seedAdminUser();
   }
