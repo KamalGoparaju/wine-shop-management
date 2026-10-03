@@ -5,15 +5,20 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "test": "node --test tests/auth.test.js"
   },
   "dependencies": {
     "@prisma/client": "^7.10.0",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
-    "prisma": "^8.0.0-rc.19"
+    "jest": "^30.5.2",
+    "prisma": "^8.0.0-rc.19",
+    "supertest": "^7.3.1"
   }
 }
