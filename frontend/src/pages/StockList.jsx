@@ -25,6 +25,10 @@ const StockList = () => {
     }
   };
 
+  useEffect(() => {
+    fetchStockEntries();
+  }, []);
+
   const handleDelete = async (entry) => {
     if (!window.confirm(`Are you sure you want to cancel and delete stock entry for '${entry.product?.name}' (${entry.totalBottles} bottles)?`)) {
       return;
