@@ -32,71 +32,43 @@
 ---
 
 ## Inventory Service Endpoints (`/api/inventory`)
+- `POST /api/inventory/brands` — Add brand.
+- `GET /api/inventory/brands` — List & search brands.
+- `POST /api/inventory/products` — Add product.
+- `GET /api/inventory/products` — List & search products.
+- `POST /api/inventory/stock/entries` — Create stock entry with serial validation.
+- `GET /api/inventory/stock/entries` — List stock entries.
+- `GET /api/inventory/stock/entries/:id` — Stock entry details with box & bottle breakdown.
+- `GET /api/inventory/stock/bottles/:serialNumber` — Scan/lookup physical bottle details by serial.
+- `POST /api/inventory/adjustments` — Log status adjustment (DAMAGED, RETURNED, ADJUSTED).
 
-### 1. Brand Management
-- **Add Brand**: `POST /api/inventory/brands`
-  - Body: `{ "name": "Royal Stag", "description": "Premium Whisky" }`
-- **List Brands**: `GET /api/inventory/brands?search=Royal&isActive=true`
-- **Get Brand**: `GET /api/inventory/brands/:id`
-- **Update Brand**: `PUT /api/inventory/brands/:id`
-- **Toggle Brand Status**: `PATCH /api/inventory/brands/:id/status`
+---
 
-### 2. Product Management
-- **Add Product**: `POST /api/inventory/products`
-  - Body:
-    ```json
-    {
-      "brandId": "brand-uuid",
-      "name": "Royal Stag Whisky",
-      "bottleVolume": "750 ML",
-      "bottlesPerBox": 3,
-      "defaultBottlePrice": 150.00,
-      "defaultBoxPrice": 450.00
-    }
-    ```
-- **List Products**: `GET /api/inventory/products?brandId=...&search=...`
-- **Get Product**: `GET /api/inventory/products/:id`
-- **Update Product**: `PUT /api/inventory/products/:id`
-- **Toggle Product Status**: `PATCH /api/inventory/products/:id/status`
+## Sales Service Endpoints (`/api/sales`)
 
-### 3. Stock Entries & Physical Bottle Serial Tracking
-- **Create Stock Entry**: `POST /api/inventory/stock/entries`
-  - Body:
-    ```json
-    {
-      "productId": "product-uuid",
-      "numberOfBoxes": 2,
-      "bottlesPerBox": 3,
-      "boxPrice": 450.00,
-      "bottlePrice": 150.00,
-      "serialNumbers": [
-        "RS10001", "RS10002", "RS10003",
-        "RS10004", "RS10005", "RS10006"
-      ],
-      "notes": "Initial batch reception"
-    }
-    ```
-  - Automatic Backend Validations:
-    - Calculates `totalBottles = numberOfBoxes * bottlesPerBox`.
-    - Validates matching serial number count.
-    - Validates global uniqueness of serial numbers.
-    - Generates Box 1 and Box 2 records with assigned bottle serial numbers.
-    - Assigns initial status `IN_STOCK`.
-- **List Stock Entries**: `GET /api/inventory/stock/entries`
-- **Stock Entry Details**: `GET /api/inventory/stock/entries/:id` (Returns boxes and bottle serial numbers)
-- **Cancel / Delete Stock Entry**: `DELETE /api/inventory/stock/entries/:id`
-- **Lookup Bottle Serial**: `GET /api/inventory/stock/bottles/:serialNumber`
-- **Available Stock Summary**: `GET /api/inventory/stock/summary`
+### 1. Create Sale (Billing)
+- **Method**: `POST`
+- **Path**: `/api/sales`
+- **Body**:
+  ```json
+  {
+    "bottleSerialNumbers": ["RS10001", "RS10002"],
+    "paymentMethod": "CASH",
+    "soldBy": "System Admin",
+    "notes": "Over the counter sale"
+  }
+  ```
+- **Execution Flow**:
+  1. Validates each bottle serial number via Inventory Service API (`GET /stock/bottles/:serialNumber`).
+  2. Ensures bottle status is `IN_STOCK`.
+  3. Calculates total amount using locked-in bottle price.
+  4. Generates unique invoice (e.g. `INV-20261003-8A2F`).
+  5. Calls Inventory Service API (`POST /adjustments`) to update bottle status to `SOLD` (Rule 4).
 
-### 4. Stock Adjustments & Audit Log
-- **Create Stock Adjustment**: `POST /api/inventory/adjustments`
-  - Body:
-    ```json
-    {
-      "serialNumber": "RS10003",
-      "newStatus": "DAMAGED",
-      "reason": "Broken during handling",
-      "adjustedBy": "user-uuid"
-    }
-    ```
-- **List Adjustments**: `GET /api/inventory/adjustments?serialNumber=RS10003`
+### 2. List Sales History
+- **Method**: `GET`
+- **Path**: `/api/sales?search=INV-20261003&paymentMethod=CASH`
+
+### 3. Get Sale Receipt Details
+- **Method**: `GET`
+- **Path**: `/api/sales/:id`
