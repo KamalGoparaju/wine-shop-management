@@ -1,0 +1,9 @@
+{
+  "name": "wine-shop-management-monorepo",
+  "version": "1.0.0",
+  "description": "Wine Shop Management System Microservices Monorepo",
+  "scripts": {
+    "test": "npm test --prefix backend/api-gateway && npm test --prefix backend/auth-service && npm test --prefix backend/inventory-service && npm test --prefix backend/sales-service && npm run build --prefix frontend",
+    "build": "npm run build --prefix frontend"
+  }
+}
