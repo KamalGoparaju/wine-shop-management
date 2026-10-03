@@ -1,4 +1,4 @@
-# Wine Shop Management System - Microservices Architecture
+# Wine Shop Management System - Microservices Architecture (Milestone 5)
 
 ## Architecture Overview
 
@@ -27,17 +27,15 @@
    └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
-## Service Allocations & Ports
-1. **API Gateway** - Port `5000`
-   - Single point of entry for client application.
-   - Routes requests to `/api/auth`, `/api/inventory`, and `/api/sales`.
-2. **Auth Service** - Port `5001`
-   - Handles user registration, authentication, JWT issuing, role checks.
-3. **Inventory Service** - Port `5002`
-   - Manages Brands, Products, Stock Entries, Box tracking, Bottle Serial Numbers, and Inventory Status.
-4. **Sales Service** - Port `5003`
-   - Handles sales creation, payment details, sales history, and communicates via HTTP API to inventory service to validate stock.
+## Service Proxy Routing Matrix
+1. **API Gateway** (`http://localhost:5000`)
+   - `GET /health` — Gateway status check.
+   - `/api/auth/*` $\rightarrow$ Proxied to `http://localhost:5001/auth/*`
+   - `/api/inventory/*` $\rightarrow$ Proxied to `http://localhost:5002/*` (JWT Auth Enforced)
+   - `/api/sales/*` $\rightarrow$ Proxied to `http://localhost:5003/*` (JWT Auth Enforced)
 
-## Core Microservices Rule
-- Each microservice strictly owns its own database (`auth_db`, `inventory_db`, `sales_db`).
-- Inter-service communication happens via APIs, never via direct database cross-querying.
+## Microservice Headers Propagation
+The API Gateway decodes validated JWT access tokens and injects standard microservice headers to downstream services:
+- `X-User-Id`: Decoded User ID
+- `X-User-Role`: User role (`ADMIN` | `STAFF`)
+- `X-User-Email`: User email
