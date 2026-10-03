@@ -162,8 +162,59 @@ const getSaleById = async (req, res, next) => {
   }
 };
 
+// Sales Report & Metrics (Today, Monthly, Payment breakdown)
+const getSalesReport = async (req, res, next) => {
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const [allSales, todaySales, monthSales] = await Promise.all([
+      prisma.sale.findMany({ include: { items: true } }),
+      prisma.sale.findMany({ where: { createdAt: { gte: todayStart } }, include: { items: true } }),
+      prisma.sale.findMany({ where: { createdAt: { gte: monthStart } } })
+    ]);
+
+    const todayRevenue = todaySales.reduce((acc, curr) => acc + parseFloat(curr.totalAmount), 0);
+    const monthRevenue = monthSales.reduce((acc, curr) => acc + parseFloat(curr.totalAmount), 0);
+    const totalRevenue = allSales.reduce((acc, curr) => acc + parseFloat(curr.totalAmount), 0);
+
+    const todayBottlesSold = todaySales.reduce((acc, curr) => acc + curr.items.length, 0);
+
+    const paymentBreakdown = {
+      CASH: allSales.filter(s => s.paymentMethod === 'CASH').length,
+      CARD: allSales.filter(s => s.paymentMethod === 'CARD').length,
+      UPI: allSales.filter(s => s.paymentMethod === 'UPI').length,
+      OTHER: allSales.filter(s => s.paymentMethod === 'OTHER').length
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: 'Sales report generated successfully',
+      data: {
+        summary: {
+          todaySalesCount: todaySales.length,
+          todayBottlesSold,
+          todayRevenue: todayRevenue.toFixed(2),
+          monthSalesCount: monthSales.length,
+          monthRevenue: monthRevenue.toFixed(2),
+          totalSalesCount: allSales.length,
+          totalRevenue: totalRevenue.toFixed(2)
+        },
+        paymentBreakdown
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSale,
   getSales,
-  getSaleById
+  getSaleById,
+  getSalesReport
 };

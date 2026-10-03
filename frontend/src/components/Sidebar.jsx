@@ -6,7 +6,7 @@ import {
   PackageCheck, 
   Box, 
   PlusCircle, 
-  ListOrdered, 
+  BarChart3, 
   LogOut, 
   ShieldCheck 
 } from 'lucide-react';
@@ -21,6 +21,7 @@ const Sidebar = () => {
     { name: 'Products', path: '/products', icon: PackageCheck },
     { name: 'Stock Entry', path: '/stock/entry', icon: PlusCircle, adminOnly: true },
     { name: 'Inventory Stock', path: '/stock/list', icon: Box },
+    { name: 'Reports', path: '/reports', icon: BarChart3 },
   ];
 
   return (

@@ -10,6 +10,7 @@ import Products from './pages/Products';
 import StockEntry from './pages/StockEntry';
 import StockList from './pages/StockList';
 import StockDetails from './pages/StockDetails';
+import Reports from './pages/Reports';
 
 function App() {
   return (
@@ -65,6 +66,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <StockDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <Reports />
               </ProtectedRoute>
             }
           />

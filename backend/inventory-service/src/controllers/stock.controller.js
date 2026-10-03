@@ -365,11 +365,53 @@ const getAvailableStockSummary = async (req, res, next) => {
   }
 };
 
+// Inventory Stock Report & Valuation
+const getStockReport = async (req, res, next) => {
+  try {
+    const [allBottles, allProducts, allBrands] = await Promise.all([
+      prisma.bottle.findMany({ select: { status: true, bottlePrice: true } }),
+      prisma.product.findMany({ select: { id: true } }),
+      prisma.brand.findMany({ select: { id: true } })
+    ]);
+
+    const statusCounts = {
+      IN_STOCK: allBottles.filter(b => b.status === 'IN_STOCK').length,
+      SOLD: allBottles.filter(b => b.status === 'SOLD').length,
+      DAMAGED: allBottles.filter(b => b.status === 'DAMAGED').length,
+      RETURNED: allBottles.filter(b => b.status === 'RETURNED').length,
+      ADJUSTED: allBottles.filter(b => b.status === 'ADJUSTED').length
+    };
+
+    const inStockValuation = allBottles
+      .filter(b => b.status === 'IN_STOCK')
+      .reduce((acc, b) => acc + parseFloat(b.bottlePrice), 0);
+
+    const totalInventoryValuation = allBottles
+      .reduce((acc, b) => acc + parseFloat(b.bottlePrice), 0);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Stock report generated successfully',
+      data: {
+        totalProductsCount: allProducts.length,
+        totalBrandsCount: allBrands.length,
+        totalBottlesRegistered: allBottles.length,
+        statusCounts,
+        inStockValuation: inStockValuation.toFixed(2),
+        totalInventoryValuation: totalInventoryValuation.toFixed(2)
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createStockEntry,
   getStockEntries,
   getStockEntryById,
   cancelStockEntry,
   getBottleBySerial,
-  getAvailableStockSummary
+  getAvailableStockSummary,
+  getStockReport
 };

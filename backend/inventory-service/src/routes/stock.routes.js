@@ -5,7 +5,8 @@ const {
   getStockEntryById,
   cancelStockEntry,
   getBottleBySerial,
-  getAvailableStockSummary
+  getAvailableStockSummary,
+  getStockReport
 } = require('../controllers/stock.controller');
 
 const router = express.Router();
@@ -17,5 +18,6 @@ router.delete('/entries/:id', cancelStockEntry);
 
 router.get('/bottles/:serialNumber', getBottleBySerial);
 router.get('/summary', getAvailableStockSummary);
+router.get('/reports/stock', getStockReport);
 
 module.exports = router;
