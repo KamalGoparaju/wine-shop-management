@@ -10,7 +10,7 @@
     "prisma:generate": "node backend/auth-service/node_modules/prisma/build/index.js generate --schema=backend/auth-service/prisma/schema.prisma && node backend/inventory-service/node_modules/prisma/build/index.js generate --schema=backend/inventory-service/prisma/schema.prisma && node backend/sales-service/node_modules/prisma/build/index.js generate --schema=backend/sales-service/prisma/schema.prisma",
     "render:build": "npm install && npm install --prefix backend/api-gateway && npm install --prefix backend/auth-service && npm install --prefix backend/inventory-service && npm install --prefix backend/sales-service && npm run prisma:generate && npm run db:push",
     "test": "npm test --prefix backend/api-gateway && npm test --prefix backend/auth-service && npm test --prefix backend/inventory-service && npm test --prefix backend/sales-service && npm run build --prefix frontend",
-    "build": "npm run build --prefix frontend"
+    "build": "npm install --prefix frontend && npm run build --prefix frontend"
   },
   "dependencies": {
     "@neon/config": "^1.9.1",
