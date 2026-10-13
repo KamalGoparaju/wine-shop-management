@@ -11,6 +11,11 @@ import StockEntry from './pages/StockEntry';
 import StockList from './pages/StockList';
 import StockDetails from './pages/StockDetails';
 import Reports from './pages/Reports';
+import DailyStock from './pages/DailyStock';
+import Expenses from './pages/Expenses';
+import ClosingHistory from './pages/ClosingHistory';
+import ShopManagement from './pages/ShopManagement';
+import Sizes from './pages/Sizes';
 
 function App() {
   return (
@@ -30,10 +35,58 @@ function App() {
             }
           />
           <Route
+            path="/daily-stock"
+            element={
+              <ProtectedRoute>
+                <DailyStock />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/expenses"
+            element={
+              <ProtectedRoute>
+                <Expenses />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/closing-history"
+            element={
+              <ProtectedRoute>
+                <ClosingHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute>
+                <ClosingHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/shops"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <ShopManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/brands"
             element={
               <ProtectedRoute adminOnly={true}>
                 <Brands />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sizes"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <Sizes />
               </ProtectedRoute>
             }
           />

@@ -9,11 +9,21 @@ const errorHandler = require('./middleware/error.middleware');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://localhost:5001';
-const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://localhost:5002';
-const SALES_SERVICE_URL = process.env.SALES_SERVICE_URL || 'http://localhost:5003';
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || `http://127.0.0.1:${process.env.AUTH_PORT || 5001}`;
+const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || `http://127.0.0.1:${process.env.INVENTORY_PORT || 5002}`;
+const SALES_SERVICE_URL = process.env.SALES_SERVICE_URL || `http://127.0.0.1:${process.env.SALES_PORT || 5003}`;
 
-app.use(cors());
+// Configurable CORS for production deployment
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+  : '*';
+
+app.use(cors({
+  origin: corsOrigins === '*' ? '*' : corsOrigins,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-shop-id', 'x-shop-code', 'x-shop-name'],
+  exposedHeaders: ['Content-Disposition']
+}));
 
 // Health Check
 app.get('/health', (req, res) => {
@@ -24,16 +34,12 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Root Endpoint
+// Root Endpoint (Sanitized - does not disclose internal network topology)
 app.get('/', (req, res) => {
   res.json({
     success: true,
     message: 'Wine Shop Management System API Gateway Active',
-    services: {
-      auth: `${AUTH_SERVICE_URL}/health`,
-      inventory: `${INVENTORY_SERVICE_URL}/health`,
-      sales: `${SALES_SERVICE_URL}/health`
-    }
+    version: '1.0.0'
   });
 });
 
@@ -58,11 +64,27 @@ app.use('/api/sales', verifyGatewayToken, createProxyMiddleware({
 // Global Error Handler
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`API Gateway listening on port ${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`API Gateway listening on 0.0.0.0:${PORT}`);
   console.log(`  -> Auth Service: ${AUTH_SERVICE_URL}`);
   console.log(`  -> Inventory Service: ${INVENTORY_SERVICE_URL}`);
   console.log(`  -> Sales Service: ${SALES_SERVICE_URL}`);
 });
+
+// Graceful shutdown handling
+const shutdown = (signal) => {
+  console.log(`[API Gateway] Received ${signal}. Shutting down gracefully...`);
+  server.close(() => {
+    console.log('[API Gateway] HTTP server closed.');
+    process.exit(0);
+  });
+  setTimeout(() => {
+    console.error('[API Gateway] Forceful termination.');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 module.exports = app;

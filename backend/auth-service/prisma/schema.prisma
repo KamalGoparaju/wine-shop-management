@@ -14,14 +14,40 @@ enum Role {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
+  id        String     @id @default(uuid())
+  email     String     @unique
   password  String
   name      String
-  role      Role     @default(STAFF)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  role      Role       @default(STAFF)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  userShops UserShop[]
 
   @@map("users")
+}
+
+model Shop {
+  id        String     @id @default(uuid())
+  code      String     @unique
+  name      String
+  address   String?
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  userShops UserShop[]
+
+  @@map("shops")
+}
+
+model UserShop {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  shopId    String   @map("shop_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, shopId])
+  @@map("user_shops")
 }

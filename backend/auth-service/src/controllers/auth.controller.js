@@ -44,6 +44,22 @@ const login = async (req, res, next) => {
       });
     }
 
+    // Fetch accessible shops
+    let shops = [];
+    if (user.role === 'ADMIN') {
+      shops = await prisma.shop.findMany({
+        where: { isActive: true },
+        orderBy: { code: 'asc' }
+      });
+    } else {
+      const userShops = await prisma.userShop.findMany({
+        where: { userId: user.id, shop: { isActive: true } },
+        include: { shop: true },
+        orderBy: { shop: { code: 'asc' } }
+      });
+      shops = userShops.map(us => us.shop);
+    }
+
     const token = generateToken({
       id: user.id,
       email: user.email,
@@ -61,7 +77,8 @@ const login = async (req, res, next) => {
           email: user.email,
           name: user.name,
           role: user.role
-        }
+        },
+        shops
       }
     });
   } catch (error) {
@@ -149,10 +166,26 @@ const getProfile = async (req, res, next) => {
       });
     }
 
+    // Fetch accessible shops
+    let shops = [];
+    if (user.role === 'ADMIN') {
+      shops = await prisma.shop.findMany({
+        where: { isActive: true },
+        orderBy: { code: 'asc' }
+      });
+    } else {
+      const userShops = await prisma.userShop.findMany({
+        where: { userId: user.id, shop: { isActive: true } },
+        include: { shop: true },
+        orderBy: { shop: { code: 'asc' } }
+      });
+      shops = userShops.map(us => us.shop);
+    }
+
     return res.status(200).json({
       success: true,
       message: 'User profile retrieved successfully',
-      data: { user }
+      data: { user, shops }
     });
   } catch (error) {
     next(error);

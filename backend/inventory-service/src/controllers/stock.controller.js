@@ -255,7 +255,7 @@ const cancelStockEntry = async (req, res, next) => {
       where: { id },
       include: {
         bottles: {
-          select: { status: true }
+          select: { id: true, status: true }
         }
       }
     });
@@ -277,9 +277,23 @@ const cancelStockEntry = async (req, res, next) => {
       });
     }
 
-    // Delete stock entry (cascades to boxes & bottles)
-    await prisma.stockEntry.delete({
-      where: { id }
+    // Delete stock entry header, boxes, bottles, and any adjustments atomically
+    await prisma.$transaction(async (tx) => {
+      const bottleIds = stockEntry.bottles.map(b => b.id).filter(Boolean);
+      if (bottleIds.length > 0) {
+        await tx.stockAdjustment.deleteMany({
+          where: { bottleId: { in: bottleIds } }
+        });
+      }
+      await tx.bottle.deleteMany({
+        where: { stockEntryId: id }
+      });
+      await tx.box.deleteMany({
+        where: { stockEntryId: id }
+      });
+      await tx.stockEntry.delete({
+        where: { id }
+      });
     });
 
     return res.status(200).json({

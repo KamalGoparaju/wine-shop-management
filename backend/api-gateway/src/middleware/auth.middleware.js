@@ -4,14 +4,13 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-super-secret-jwt-key';
 
 const verifyGatewayToken = (req, res, next) => {
   // Public paths that do not require authentication
-  const publicPaths = [
-    '/api/auth/login',
-    '/api/auth/register',
-    '/health',
-    '/'
-  ];
+  const isPublic = 
+    req.path === '/' || 
+    req.path === '/health' ||
+    req.path.startsWith('/api/auth/login') ||
+    req.path.startsWith('/api/auth/register');
 
-  if (publicPaths.some(path => req.path.startsWith(path))) {
+  if (isPublic) {
     return next();
   }
 
@@ -34,6 +33,9 @@ const verifyGatewayToken = (req, res, next) => {
     req.headers['x-user-id'] = decoded.id;
     req.headers['x-user-role'] = decoded.role;
     req.headers['x-user-email'] = decoded.email;
+    if (req.headers['x-shop-id']) {
+      req.headers['x-shop-id'] = String(req.headers['x-shop-id']).trim();
+    }
 
     next();
   } catch (error) {

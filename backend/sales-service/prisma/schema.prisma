@@ -17,6 +17,7 @@ enum PaymentMethod {
 
 model Sale {
   id            String        @id @default(uuid())
+  shopId        String?       @map("shop_id")
   invoiceNumber String        @unique @map("invoice_number")
   totalAmount   Decimal       @map("total_amount") @db.Decimal(10, 2)
   paymentMethod PaymentMethod @default(CASH) @map("payment_method")
@@ -27,6 +28,49 @@ model Sale {
   items         SaleItem[]
 
   @@map("sales")
+}
+
+model Expense {
+  id            String        @id @default(uuid())
+  shopId        String        @map("shop_id")
+  businessDate  DateTime      @map("business_date") @db.Date
+  category      String
+  description   String
+  amount        Decimal       @map("amount") @db.Decimal(10, 2)
+  paymentMethod PaymentMethod @default(CASH) @map("payment_method")
+  recipient     String?
+  createdBy     String        @map("created_by")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  @@index([shopId, businessDate])
+  @@map("expenses")
+}
+
+model DailyClosing {
+  id                        String   @id @default(uuid())
+  shopId                    String   @map("shop_id")
+  businessDate              DateTime @map("business_date") @db.Date
+  totalBusiness             Decimal  @map("total_business") @db.Decimal(10, 2)
+  totalBottlesSold          Int      @map("total_bottles_sold")
+  totalBottlesRemaining      Int      @map("total_bottles_remaining")
+  onlineCollection          Decimal  @map("online_collection") @db.Decimal(10, 2)
+  offlineCollection         Decimal  @map("offline_collection") @db.Decimal(10, 2)
+  totalCollected            Decimal  @map("total_collected") @db.Decimal(10, 2)
+  totalExpenses             Decimal  @map("total_expenses") @db.Decimal(10, 2)
+  finalAmount               Decimal  @map("final_amount") @db.Decimal(10, 2)
+  collectionDifference      Decimal  @map("collection_difference") @db.Decimal(10, 2)
+  extraAmountInformational  Decimal  @default(0) @map("extra_amount_informational") @db.Decimal(10, 2)
+  status                    String   @default("CLOSED")
+  closedBy                  String   @map("closed_by")
+  closedAt                  DateTime @default(now()) @map("closed_at")
+  notes                     String?
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  @@unique([shopId, businessDate])
+  @@index([shopId])
+  @@map("daily_closings")
 }
 
 model SaleItem {

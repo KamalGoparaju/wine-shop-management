@@ -129,6 +129,7 @@ const Brands = () => {
             <table className="w-full text-left text-sm text-slate-300">
               <thead className="bg-slate-950 text-slate-400 uppercase text-[11px] font-semibold border-b border-slate-800">
                 <tr>
+                  <th className="px-4 py-3.5 text-center">S.No.</th>
                   <th className="px-6 py-3.5">Brand Name</th>
                   <th className="px-6 py-3.5">Description</th>
                   <th className="px-6 py-3.5 text-center">Products</th>
@@ -137,8 +138,11 @@ const Brands = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {brands.map((b) => (
+                {brands.map((b, idx) => (
                   <tr key={b.id} className="hover:bg-slate-800/40 transition-colors">
+                    <td className="px-4 py-4 text-center font-bold text-amber-400 font-mono">
+                      #{b.serialNo || idx + 1}
+                    </td>
                     <td className="px-6 py-4 font-bold text-white">{b.name}</td>
                     <td className="px-6 py-4 text-slate-400">{b.description || '—'}</td>
                     <td className="px-6 py-4 text-center font-bold text-amber-400">{b._count?.products || 0}</td>

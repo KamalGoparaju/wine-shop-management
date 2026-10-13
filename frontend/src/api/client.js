@@ -9,12 +9,23 @@ const apiClient = axios.create({
   }
 });
 
-// Request interceptor to attach JWT token
+// Request interceptor to attach JWT token and x-shop-id
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    const savedShop = localStorage.getItem('selectedShop');
+    if (savedShop) {
+      try {
+        const shop = JSON.parse(savedShop);
+        if (shop && shop.id) {
+          config.headers['x-shop-id'] = shop.id;
+        }
+      } catch (e) {
+        // ignore JSON parse error
+      }
     }
     return config;
   },

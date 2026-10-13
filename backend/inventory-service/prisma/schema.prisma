@@ -22,15 +22,75 @@ enum StockEntryStatus {
 }
 
 model Brand {
-  id          String    @id @default(uuid())
-  name        String    @unique
-  description String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  products    Product[]
+  id                String             @id @default(uuid())
+  serialNo          Int?               @unique @map("serial_no")
+  name              String             @unique
+  description       String?
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  products          Product[]
+  rates             BrandSizeRate[]
+  dailyStockRecords DailyStockRecord[]
 
   @@map("brands")
+}
+
+model Size {
+  id                String             @id @default(uuid())
+  code              String             @unique
+  name              String
+  volumeMl          Int?               @map("volume_ml")
+  description       String?
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  rates             BrandSizeRate[]
+  dailyStockRecords DailyStockRecord[]
+
+  @@map("sizes")
+}
+
+model BrandSizeRate {
+  id        String   @id @default(uuid())
+  brandId   String   @map("brand_id")
+  sizeId    String   @map("size_id")
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  size      Size     @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+  rate      Decimal  @map("rate") @db.Decimal(10, 2)
+  shopId    String?  @map("shop_id")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([brandId, sizeId, shopId])
+  @@map("brand_size_rates")
+}
+
+model DailyStockRecord {
+  id           String   @id @default(uuid())
+  shopId       String   @map("shop_id")
+  businessDate DateTime @map("business_date") @db.Date
+  brandId      String   @map("brand_id")
+  sizeId       String   @map("size_id")
+  brand        Brand    @relation(fields: [brandId], references: [id])
+  size         Size     @relation(fields: [sizeId], references: [id])
+  openingStock Int      @default(0) @map("opening_stock")
+  indentStock  Int      @default(0) @map("indent_stock")
+  totalStock   Int      @default(0) @map("total_stock")
+  closingStock Int      @default(0) @map("closing_stock")
+  saleCount    Int      @default(0) @map("sale_count")
+  bottleRate   Decimal  @map("bottle_rate") @db.Decimal(10, 2)
+  saleAmount   Decimal  @map("sale_amount") @db.Decimal(10, 2)
+  extraAmount  Decimal  @default(0) @map("extra_amount") @db.Decimal(10, 2)
+  status       String   @default("DRAFT")
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([shopId, businessDate, brandId, sizeId])
+  @@index([shopId, businessDate])
+  @@map("daily_stock_records")
 }
 
 model Product {
@@ -54,6 +114,7 @@ model Product {
 
 model StockEntry {
   id            String           @id @default(uuid())
+  shopId        String?          @map("shop_id")
   productId     String           @map("product_id")
   product       Product          @relation(fields: [productId], references: [id])
   numberOfBoxes Int              @map("number_of_boxes")
@@ -89,7 +150,7 @@ model Bottle {
   boxId            String            @map("box_id")
   box              Box               @relation(fields: [boxId], references: [id], onDelete: Cascade)
   stockEntryId     String            @map("stock_entry_id")
-  stockEntry       StockEntry        @relation(fields: [stockEntryId], references: [id])
+  stockEntry       StockEntry        @relation(fields: [stockEntryId], references: [id], onDelete: Cascade)
   productId        String            @map("product_id")
   product          Product           @relation(fields: [productId], references: [id])
   bottlePrice      Decimal           @map("bottle_price") @db.Decimal(10, 2)
@@ -107,7 +168,7 @@ model Bottle {
 model StockAdjustment {
   id             String       @id @default(uuid())
   bottleId       String       @map("bottle_id")
-  bottle         Bottle       @relation(fields: [bottleId], references: [id])
+  bottle         Bottle       @relation(fields: [bottleId], references: [id], onDelete: Cascade)
   previousStatus BottleStatus @map("previous_status")
   newStatus      BottleStatus @map("new_status")
   reason         String
