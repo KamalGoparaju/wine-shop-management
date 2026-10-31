@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import apiClient from '../api/client';
+import { useTheme } from '../context/ThemeContext';
 import { Package, Barcode, CheckCircle2, AlertTriangle, ArrowRight, Wand2, Trash2, Grid, AlignLeft, Clipboard } from 'lucide-react';
 
 const StockEntry = () => {
   const navigate = useNavigate();
+  const { activeTheme } = useTheme();
 
   const [products, setProducts] = useState([]);
   const [selectedProductId, setSelectedProductId] = useState('');
@@ -266,33 +268,33 @@ const StockEntry = () => {
   return (
     <Layout title="New Stock Entry">
       <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
-        <div className="bg-slate-900/60 p-3.5 sm:p-5 rounded-2xl border border-slate-800">
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <Package className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 shrink-0" />
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Package className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" style={{ color: activeTheme.primary }} />
             Create Stock Entry
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             Receive stock boxes and enter physical serial numbers for every bottle
           </p>
         </div>
 
         {error && (
-          <div className="p-3.5 sm:p-4 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs sm:text-sm flex items-center gap-3 shadow-lg">
-            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+          <div className="p-3.5 sm:p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs sm:text-sm flex items-center gap-3 shadow-xs">
+            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
           {/* Section 1: Product & Quantity Setup */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-5">
-            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
-              <Package className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 shrink-0" />
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xs space-y-4 sm:space-y-5">
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Package className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" style={{ color: activeTheme.primary }} />
               Product Selection & Quantity Calculation
             </h2>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase mb-2">
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-2">
                 Product *
               </label>
               {loading ? (
@@ -302,10 +304,10 @@ const StockEntry = () => {
                   required
                   value={selectedProductId}
                   onChange={handleProductChange}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-500 font-semibold"
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-slate-900 text-xs sm:text-sm focus:outline-none focus-theme font-semibold"
                 >
                   {products.map((p) => (
-                    <option key={p.id} value={p.id} className="bg-slate-900 text-white">
+                    <option key={p.id} value={p.id}>
                       {p.name} ({p.brand?.name}) — {p.bottleVolume} ({p.bottlesPerBox} bottles/box)
                     </option>
                   ))}
@@ -315,7 +317,7 @@ const StockEntry = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-5">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 sm:mb-2">
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1 sm:mb-2">
                   Number of Boxes *
                 </label>
                 <input
@@ -324,12 +326,12 @@ const StockEntry = () => {
                   required
                   value={numberOfBoxes}
                   onChange={(e) => setNumberOfBoxes(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-500 font-mono"
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-slate-900 text-xs sm:text-sm focus:outline-none focus-theme font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 sm:mb-2">
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1 sm:mb-2">
                   Bottles Per Box *
                 </label>
                 <input
@@ -338,22 +340,30 @@ const StockEntry = () => {
                   required
                   value={bottlesPerBox}
                   onChange={(e) => setBottlesPerBox(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-500 font-mono"
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-slate-900 text-xs sm:text-sm focus:outline-none focus-theme font-mono"
                 />
               </div>
 
               {/* Calculated Total Bottles Output */}
-              <div className="bg-amber-950/30 border border-amber-800/40 rounded-xl p-3 flex flex-col justify-center text-center">
-                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-amber-400">Total Expected Bottles</span>
-                <span className="text-xl sm:text-2xl font-extrabold text-white mt-0.5 font-mono">
-                  {numberOfBoxes} × {bottlesPerBox} = <span className="text-amber-400">{totalBottles}</span>
+              <div
+                className="border rounded-xl p-3 flex flex-col justify-center text-center"
+                style={{
+                  backgroundColor: activeTheme.light,
+                  borderColor: activeTheme.border
+                }}
+              >
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider" style={{ color: activeTheme.primary }}>
+                  Total Expected Bottles
+                </span>
+                <span className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5 font-mono">
+                  {numberOfBoxes} × {bottlesPerBox} = <span style={{ color: activeTheme.primary }}>{totalBottles}</span>
                 </span>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-5 pt-1">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 sm:mb-2">
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1 sm:mb-2">
                   Purchase Box Price (₹) *
                 </label>
                 <input
@@ -363,12 +373,12 @@ const StockEntry = () => {
                   required
                   value={boxPrice}
                   onChange={(e) => setBoxPrice(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-emerald-400 font-mono text-xs sm:text-sm focus:outline-none focus:border-amber-500"
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-mono text-xs sm:text-sm focus:outline-none focus-theme"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 sm:mb-2">
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1 sm:mb-2">
                   Purchase Bottle Price (₹) *
                 </label>
                 <input
@@ -378,30 +388,31 @@ const StockEntry = () => {
                   required
                   value={bottlePrice}
                   onChange={(e) => setBottlePrice(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-emerald-400 font-mono text-xs sm:text-sm focus:outline-none focus:border-amber-500"
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-mono text-xs sm:text-sm focus:outline-none focus-theme"
                 />
               </div>
             </div>
           </div>
 
           {/* Section 2: Physical Serial Numbers Input */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-800 pb-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xs space-y-4 sm:space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2">
-                <Barcode className="w-5 h-5 text-amber-500 shrink-0" />
-                <h2 className="text-sm sm:text-base font-bold text-white">Bottle Serial Numbers Entry</h2>
+                <Barcode className="w-5 h-5 shrink-0" style={{ color: activeTheme.primary }} />
+                <h2 className="text-sm sm:text-base font-bold text-slate-900">Bottle Serial Numbers Entry</h2>
               </div>
 
               {/* Mode Toggle Buttons */}
-              <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 self-start sm:self-auto">
+              <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200 self-start sm:self-auto">
                 <button
                   type="button"
                   onClick={() => handleToggleMode('per_bottle')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                     entryMode === 'per_bottle'
-                      ? 'bg-amber-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
+                  style={entryMode === 'per_bottle' ? { backgroundColor: activeTheme.primary } : {}}
                 >
                   <Grid className="w-3.5 h-3.5" />
                   Per-Bottle Grid
@@ -411,9 +422,10 @@ const StockEntry = () => {
                   onClick={() => handleToggleMode('bulk_paste')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                     entryMode === 'bulk_paste'
-                      ? 'bg-amber-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
+                  style={entryMode === 'bulk_paste' ? { backgroundColor: activeTheme.primary } : {}}
                 >
                   <AlignLeft className="w-3.5 h-3.5" />
                   Bulk Paste Mode
@@ -422,21 +434,21 @@ const StockEntry = () => {
             </div>
 
             {/* Counter & Warning Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-300">
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
                 <span>Total Progress:</span>
                 <span className={`px-2.5 py-0.5 rounded-full font-bold font-mono border ${
                   isValidCount
-                    ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
-                    : 'bg-amber-950 text-amber-400 border-amber-800'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                    : 'bg-amber-50 text-amber-800 border-amber-300'
                 }`}>
                   {filledCount} / {totalBottles} Bottles Entered
                 </span>
               </div>
 
               {hasDuplicates && (
-                <div className="text-xs text-rose-400 font-semibold flex items-center gap-1">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+                <div className="text-xs text-rose-600 font-semibold flex items-center gap-1">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
                   <span>Duplicate Serials: {duplicateSerials.join(', ')}</span>
                 </div>
               )}
@@ -446,10 +458,10 @@ const StockEntry = () => {
             {entryMode === 'per_bottle' ? (
               <div className="space-y-4 sm:space-y-6">
                 {serialsGrid.map((boxRow, boxIdx) => (
-                  <div key={boxIdx} className="bg-slate-950 border border-slate-800/80 rounded-xl p-3 sm:p-4 space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/60 pb-2.5">
-                      <span className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  <div key={boxIdx} className="bg-slate-50/60 border border-slate-200 rounded-xl p-3 sm:p-4 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+                      <span className="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5" style={{ color: activeTheme.primary }}>
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: activeTheme.primary }}></span>
                         Box #{boxIdx + 1} ({boxRow.filter(Boolean).length} / {bottlesPerBox} bottles filled)
                       </span>
 
@@ -457,17 +469,22 @@ const StockEntry = () => {
                         <button
                           type="button"
                           onClick={() => handleAutoFillBox(boxIdx)}
-                          className="flex items-center gap-1 px-2.5 py-1 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border border-amber-800/50 rounded-lg text-xs font-medium transition-all"
+                          className="flex items-center gap-1 px-2.5 py-1 border rounded-lg text-xs font-medium transition-all"
+                          style={{
+                            backgroundColor: activeTheme.light,
+                            color: activeTheme.primary,
+                            borderColor: activeTheme.border
+                          }}
                           title="Auto-fill sequential serial numbers starting from Bottle 1"
                         >
-                          <Wand2 className="w-3.5 h-3.5 text-amber-400" />
+                          <Wand2 className="w-3.5 h-3.5" />
                           Auto-Fill Box
                         </button>
 
                         <button
                           type="button"
                           onClick={() => handleClearBox(boxIdx)}
-                          className="p-1 rounded-lg bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-rose-400 border border-slate-800 hover:border-rose-800 transition-colors"
+                          className="p-1 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 hover:border-rose-300 transition-colors"
                           title="Clear Box Serials"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -483,8 +500,8 @@ const StockEntry = () => {
 
                         return (
                           <div key={bottleIdx} className="space-y-1">
-                            <label className="block text-[11px] font-semibold text-slate-400">
-                              Bottle #{globalBottleNumber} <span className="text-slate-500">(Box {boxIdx + 1}, #{bottleIdx + 1})</span>
+                            <label className="block text-[11px] font-semibold text-slate-600">
+                              Bottle #{globalBottleNumber} <span className="text-slate-400">(Box {boxIdx + 1}, #{bottleIdx + 1})</span>
                             </label>
                             <div className="relative">
                               <input
@@ -495,19 +512,19 @@ const StockEntry = () => {
                                 onKeyDown={(e) => handleKeyDown(e, boxIdx, bottleIdx)}
                                 onPaste={(e) => bottleIdx === 0 && handlePasteBox(boxIdx, e)}
                                 placeholder={`Serial #${globalBottleNumber}`}
-                                className={`w-full bg-slate-900 border rounded-xl px-3 py-2 text-amber-300 font-mono text-xs focus:outline-none focus:border-amber-500 transition-colors ${
+                                className={`w-full bg-white border rounded-xl px-3 py-2 font-mono text-xs focus:outline-none focus-theme transition-colors ${
                                   isDup
-                                    ? 'border-rose-500 bg-rose-950/30 text-rose-300'
+                                    ? 'border-rose-400 bg-rose-50/50 text-rose-700'
                                     : val.trim()
-                                      ? 'border-emerald-800/60 bg-emerald-950/20'
-                                      : 'border-slate-800'
+                                      ? 'border-emerald-300 bg-emerald-50/30 text-slate-900'
+                                      : 'border-slate-300 text-slate-900'
                                 }`}
                               />
                               {val.trim() && !isDup && (
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 absolute right-2.5 top-1/2 -translate-y-1/2" />
                               )}
                               {isDup && (
-                                <AlertTriangle className="w-3.5 h-3.5 text-rose-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 absolute right-2.5 top-1/2 -translate-y-1/2" />
                               )}
                             </div>
                           </div>
@@ -520,7 +537,7 @@ const StockEntry = () => {
             ) : (
               /* MODE B: BULK PASTE MODE */
               <div className="space-y-3">
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500">
                   Paste bottle serial numbers (one per line or separated by commas). Numbers will be automatically grouped into Box 1, Box 2, etc.
                 </p>
                 <textarea
@@ -529,13 +546,13 @@ const StockEntry = () => {
                   value={bulkText}
                   onChange={(e) => setBulkText(e.target.value)}
                   placeholder="RS10001&#10;RS10002&#10;RS10003&#10;..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 sm:p-4 text-amber-300 font-mono text-xs sm:text-sm focus:outline-none focus:border-amber-500 leading-relaxed"
+                  className="w-full bg-white border border-slate-300 rounded-xl p-3 sm:p-4 text-slate-900 font-mono text-xs sm:text-sm focus:outline-none focus-theme leading-relaxed"
                 />
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase mb-2">
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-2">
                 Notes / Shipment Reference (Optional)
               </label>
               <input
@@ -543,7 +560,7 @@ const StockEntry = () => {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Supplier invoice #, batch notes..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-500"
+                className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 text-xs sm:text-sm focus:outline-none focus-theme"
               />
             </div>
           </div>
@@ -552,7 +569,8 @@ const StockEntry = () => {
             <button
               type="submit"
               disabled={submitting || !isValidCount}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-lg shadow-amber-900/30 transition-all disabled:opacity-50 text-xs sm:text-sm"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 text-white font-bold rounded-xl shadow-xs transition-all disabled:opacity-50 text-xs sm:text-sm hover:opacity-95"
+              style={{ backgroundColor: activeTheme.primary }}
             >
               <span>{submitting ? 'Submitting Entry...' : 'Complete Stock Entry'}</span>
               <ArrowRight className="w-4 h-4" />

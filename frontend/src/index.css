@@ -1,34 +1,60 @@
 @import "tailwindcss";
 
+:root {
+  /* White/Light Design System Base Tokens */
+  --color-bg-app: #F8FAFC;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-surface-secondary: #F1F5F9;
+  --color-bg-hover: #F8FAFC;
+  --color-text-primary: #1E293B;
+  --color-text-secondary: #64748B;
+  --color-text-muted: #94A3B8;
+  --color-border: #E2E8F0;
+  --color-border-subtle: #F1F5F9;
+
+  /* Dynamic Accent Color Tokens (Default: Green #059669) */
+  --color-primary: #059669;
+  --color-primary-hover: #047857;
+  --color-primary-active: #065F46;
+  --color-primary-light: #ECFDF5;
+  --color-primary-border: #A7F3D0;
+  --color-primary-ring: rgba(5, 150, 105, 0.25);
+  --color-primary-rgb: 5, 150, 105;
+}
+
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
+    background-color: #F8FAFC;
   }
 
   body {
-    @apply bg-slate-950 text-slate-100 font-sans antialiased selection:bg-amber-600/30 selection:text-amber-200;
+    background-color: #F8FAFC;
+    color: #1E293B;
+    font-family: inherit;
+    -webkit-font-smoothing: antialiased;
     min-height: 100vh;
     min-height: 100dvh;
   }
 
-  /* Custom Slim Dark Scrollbars */
+  /* Professional Slim Light Scrollbars */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    background: #020617;
+    background: #F1F5F9;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #1e293b;
+    background: #CBD5E1;
     border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #334155;
+    background: #94A3B8;
   }
 
   /* Prevent iOS zoom on inputs while keeping text sharp */
@@ -43,7 +69,7 @@
   }
 }
 
-/* Mobile Safe Area Utilities */
+/* Mobile Safe Area & Touch Utilities */
 .safe-pb {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
@@ -51,4 +77,42 @@
 .touch-target {
   min-height: 44px;
   min-width: 44px;
+}
+
+/* Reusable Dynamic Theme Classes */
+.bg-theme {
+  background-color: var(--color-primary);
+}
+
+.bg-theme-hover:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.text-theme {
+  color: var(--color-primary);
+}
+
+.border-theme {
+  border-color: var(--color-primary);
+}
+
+.bg-theme-light {
+  background-color: var(--color-primary-light);
+}
+
+.border-theme-border {
+  border-color: var(--color-primary-border);
+}
+
+.focus-theme:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-ring);
+}
+
+.card-white {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }

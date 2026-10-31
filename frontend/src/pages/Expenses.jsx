@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import apiClient from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { 
   Receipt, 
   Plus, 
@@ -16,6 +17,7 @@ import {
 
 const Expenses = () => {
   const { selectedShop } = useAuth();
+  const { activeTheme } = useTheme();
   const [businessDate, setBusinessDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [expenses, setExpenses] = useState([]);
   const [totalAmount, setTotalAmount] = useState('0.00');
@@ -104,57 +106,57 @@ const Expenses = () => {
     <Layout title="Daily Expense Management">
       <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
         {/* Header & Date Selector */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 bg-slate-900/60 p-3.5 sm:p-5 rounded-2xl border border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-              <Receipt className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 shrink-0" />
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <Receipt className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" style={{ color: activeTheme.primary }} />
               Daily Expenses
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-              Active Shop: <strong className="text-amber-400">{selectedShop?.name}</strong>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Active Shop: <strong style={{ color: activeTheme.primary }}>{selectedShop?.name}</strong>
             </p>
           </div>
 
-          <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 self-start sm:self-auto">
-            <Calendar className="w-4 h-4 text-amber-500 shrink-0" />
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 self-start sm:self-auto">
+            <Calendar className="w-4 h-4 shrink-0" style={{ color: activeTheme.primary }} />
             <input
               type="date"
               value={businessDate}
               onChange={(e) => setBusinessDate(e.target.value)}
-              className="bg-transparent text-white font-mono text-xs focus:outline-none cursor-pointer"
+              className="bg-transparent text-slate-800 font-mono text-xs focus:outline-none cursor-pointer"
               aria-label="Select expense date"
             />
           </div>
         </div>
 
         {error && (
-          <div className="p-3.5 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
             <span>{error}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="p-3.5 rounded-xl bg-emerald-950/50 border border-emerald-800/50 text-emerald-300 text-xs flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
             <span>{successMsg}</span>
           </div>
         )}
 
         {/* Add Expense Form */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
-          <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
-            <Plus className="w-4 h-4 text-amber-500" />
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xs space-y-4">
+          <h2 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+            <Plus className="w-4 h-4" style={{ color: activeTheme.primary }} />
             Add New Expense for {businessDate}
           </h2>
 
           <form onSubmit={handleAddExpense} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Category *</label>
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Category *</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white text-xs focus:outline-none focus:border-amber-500"
+                className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 text-xs focus:outline-none focus-theme"
               >
                 <option value="MISC">Miscellaneous Shop Cost</option>
                 <option value="TRANSPORT">Transport / Loading</option>
@@ -166,19 +168,19 @@ const Expenses = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Description *</label>
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Description *</label>
               <input
                 type="text"
                 required
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="e.g. Ice purchase, Cartage, Given to Raju"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white text-xs focus:outline-none focus:border-amber-500"
+                className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 text-xs focus:outline-none focus-theme placeholder-slate-400"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Amount (₹) *</label>
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Amount (₹) *</label>
               <input
                 type="number"
                 step="0.01"
@@ -187,16 +189,16 @@ const Expenses = () => {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-emerald-400 font-mono text-xs focus:outline-none focus:border-amber-500 font-bold"
+                className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-mono text-xs focus:outline-none focus-theme font-bold"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Payment Method</label>
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Payment Method</label>
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white text-xs focus:outline-none focus:border-amber-500"
+                className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 text-xs focus:outline-none focus-theme"
               >
                 <option value="CASH">Cash</option>
                 <option value="UPI">UPI / Online</option>
@@ -206,13 +208,13 @@ const Expenses = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Recipient / Given To</label>
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Recipient / Given To</label>
               <input
                 type="text"
                 value={recipient}
                 onChange={(e) => setRecipient(e.target.value)}
                 placeholder="Optional person name"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white text-xs focus:outline-none focus:border-amber-500"
+                className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 text-xs focus:outline-none focus-theme placeholder-slate-400"
               />
             </div>
 
@@ -220,7 +222,8 @@ const Expenses = () => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-xl shadow-md shadow-amber-900/20 transition-all disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white font-semibold text-xs rounded-xl shadow-xs transition-all disabled:opacity-50"
+                style={{ backgroundColor: activeTheme.primary }}
               >
                 <Plus className="w-4 h-4" />
                 {submitting ? 'Adding...' : 'Add Expense'}
@@ -230,12 +233,12 @@ const Expenses = () => {
         </div>
 
         {/* Expenses List */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-3.5 sm:p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
-            <h2 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+          <div className="p-3.5 sm:p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+            <h2 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider">
               Itemized Expenses ({expenses.length})
             </h2>
-            <div className="text-xs sm:text-sm font-mono font-bold text-rose-400">
+            <div className="text-xs sm:text-sm font-mono font-bold text-rose-600">
               Total: ₹{totalAmount}
             </div>
           </div>
@@ -249,32 +252,39 @@ const Expenses = () => {
           ) : (
             <>
               {/* Mobile Card List (< md) */}
-              <div className="md:hidden divide-y divide-slate-800/80 p-2 sm:p-3 space-y-2">
+              <div className="md:hidden divide-y divide-slate-100 p-2 sm:p-3 space-y-2">
                 {expenses.map((exp) => (
-                  <div key={exp.id} className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-2">
+                  <div key={exp.id} className="p-3 bg-slate-50/60 rounded-xl border border-slate-200 space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950/60 text-amber-400 border border-amber-800/40">
+                        <span
+                          className="px-2 py-0.5 rounded-full text-[10px] font-bold border"
+                          style={{
+                            backgroundColor: activeTheme.light,
+                            color: activeTheme.primary,
+                            borderColor: activeTheme.border
+                          }}
+                        >
                           {exp.category}
                         </span>
-                        <h4 className="font-semibold text-white text-sm mt-1">{exp.description}</h4>
+                        <h4 className="font-semibold text-slate-900 text-sm mt-1">{exp.description}</h4>
                         {exp.recipient && (
-                          <p className="text-xs text-slate-400 mt-0.5">To: {exp.recipient}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">To: {exp.recipient}</p>
                         )}
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="text-base font-bold text-rose-400 font-mono">
+                        <span className="text-base font-bold text-rose-600 font-mono">
                           ₹{parseFloat(exp.amount).toFixed(2)}
                         </span>
-                        <span className="block text-[10px] text-slate-400 uppercase mt-0.5">{exp.paymentMethod}</span>
+                        <span className="block text-[10px] text-slate-500 uppercase mt-0.5">{exp.paymentMethod}</span>
                       </div>
                     </div>
 
-                    <div className="flex justify-end pt-1 border-t border-slate-800/60">
+                    <div className="flex justify-end pt-1 border-t border-slate-200">
                       <button
                         onClick={() => handleDeleteExpense(exp.id)}
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 rounded-lg transition-colors"
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         <span>Delete</span>
@@ -286,8 +296,8 @@ const Expenses = () => {
 
               {/* Desktop Table (>= md) */}
               <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-slate-950/80 text-slate-400 uppercase text-[10px] font-semibold border-b border-slate-800">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] font-semibold border-b border-slate-200">
                     <tr>
                       <th className="px-4 py-3">Category</th>
                       <th className="px-4 py-3">Description</th>
@@ -297,24 +307,31 @@ const Expenses = () => {
                       <th className="px-4 py-3 text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-mono">
+                  <tbody className="divide-y divide-slate-100 font-mono">
                     {expenses.map((exp) => (
-                      <tr key={exp.id} className="hover:bg-slate-800/40 transition-colors">
+                      <tr key={exp.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="px-4 py-3">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950/60 text-amber-400 border border-amber-800/40">
+                          <span
+                            className="px-2 py-0.5 rounded-full text-[10px] font-bold border"
+                            style={{
+                              backgroundColor: activeTheme.light,
+                              color: activeTheme.primary,
+                              borderColor: activeTheme.border
+                            }}
+                          >
                             {exp.category}
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-sans font-semibold text-white">{exp.description}</td>
-                        <td className="px-4 py-3 text-slate-400 font-sans">{exp.recipient || '—'}</td>
-                        <td className="px-4 py-3 text-slate-400">{exp.paymentMethod}</td>
-                        <td className="px-4 py-3 text-right font-bold text-rose-400 font-sans">
+                        <td className="px-4 py-3 font-sans font-semibold text-slate-900">{exp.description}</td>
+                        <td className="px-4 py-3 text-slate-600 font-sans">{exp.recipient || '—'}</td>
+                        <td className="px-4 py-3 text-slate-600">{exp.paymentMethod}</td>
+                        <td className="px-4 py-3 text-right font-bold text-rose-600 font-sans">
                           ₹{parseFloat(exp.amount).toFixed(2)}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <button
                             onClick={() => handleDeleteExpense(exp.id)}
-                            className="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 border border-rose-800/30 transition-colors"
+                            className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors"
                             title="Delete Expense"
                           >
                             <Trash2 className="w-3.5 h-3.5" />

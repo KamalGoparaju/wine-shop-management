@@ -5,8 +5,33 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Wine Shop Management System</title>
+    <script>
+      (function() {
+        try {
+          const themes = {
+            green: { primary: '#059669', hover: '#047857', active: '#065F46', light: '#ECFDF5', border: '#A7F3D0', ring: 'rgba(5, 150, 105, 0.25)', rgb: '5, 150, 105' },
+            blue: { primary: '#2675D8', hover: '#1D4ED8', active: '#1E40AF', light: '#EFF6FF', border: '#BFDBFE', ring: 'rgba(38, 117, 216, 0.25)', rgb: '38, 117, 216' },
+            orange: { primary: '#EA580C', hover: '#C2410C', active: '#9A3412', light: '#FFF7ED', border: '#FED7AA', ring: 'rgba(234, 88, 12, 0.25)', rgb: '234, 88, 12' },
+            purple: { primary: '#7C3AED', hover: '#6D28D9', active: '#5B21B6', light: '#F5F3FF', border: '#DDD6FE', ring: 'rgba(124, 58, 237, 0.25)', rgb: '124, 58, 237' },
+            teal: { primary: '#0F8175', hover: '#0D6E64', active: '#115E59', light: '#F0FDFA', border: '#99F6E4', ring: 'rgba(15, 129, 117, 0.25)', rgb: '15, 129, 117' },
+            pink: { primary: '#C2185B', hover: '#AD1457', active: '#880E4F', light: '#FDF2F8', border: '#FBCFE8', ring: 'rgba(194, 24, 91, 0.25)', rgb: '194, 24, 91' }
+          };
+          const savedTheme = localStorage.getItem('wine_shop_accent_theme') || 'green';
+          const t = themes[savedTheme] || themes.green;
+          const root = document.documentElement;
+          root.style.setProperty('--color-primary', t.primary);
+          root.style.setProperty('--color-primary-hover', t.hover);
+          root.style.setProperty('--color-primary-active', t.active);
+          root.style.setProperty('--color-primary-light', t.light);
+          root.style.setProperty('--color-primary-border', t.border);
+          root.style.setProperty('--color-primary-ring', t.ring);
+          root.style.setProperty('--color-primary-rgb', t.rgb);
+          root.setAttribute('data-theme', savedTheme);
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-slate-950 text-slate-100">
+  <body class="bg-slate-50 text-slate-800 antialiased selection:bg-slate-200 selection:text-slate-900">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
