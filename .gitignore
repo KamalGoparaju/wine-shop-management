@@ -28,6 +28,7 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
+*.traineddata
 *.sw?
 
 # Logs

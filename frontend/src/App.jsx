@@ -17,13 +17,15 @@ import Expenses from './pages/Expenses';
 import ClosingHistory from './pages/ClosingHistory';
 import ShopManagement from './pages/ShopManagement';
 import Sizes from './pages/Sizes';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
         <Router>
-        <Routes>
+          <ErrorBoundary>
+            <Routes>
           {/* Public Route */}
           <Route path="/login" element={<Login />} />
 
@@ -136,6 +138,7 @@ function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
+        </ErrorBoundary>
       </Router>
     </ThemeProvider>
   </AuthProvider>
