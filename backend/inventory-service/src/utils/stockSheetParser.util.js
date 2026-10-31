@@ -1,11 +1,4 @@
 const ExcelJS = require('exceljs');
-const pdfParse = require('pdf-parse');
-let Tesseract;
-try {
-  Tesseract = require('tesseract.js');
-} catch (e) {
-  console.warn('Tesseract.js not loaded, will fallback gracefully for images:', e.message);
-}
 
 // Levenshtein similarity distance (0 to 1)
 function stringSimilarity(s1, s2) {
@@ -226,11 +219,11 @@ const parseSpreadsheetBuffer = async (buffer, filename) => {
               headerMap.extra = idx;
             }
           });
-          return; // Skip the header row itself
+          return; // Skip header row
         }
       }
 
-      // If we don't have a header map yet, or if values are sparse, check if this is a valid data row
+      // Check if valid data row
       const nonEmpty = values.filter(v => v !== '');
       if (nonEmpty.length < 2) return;
 
@@ -258,10 +251,7 @@ const parseSpreadsheetBuffer = async (buffer, filename) => {
         amount = headerMap.amount !== undefined ? parseNumber(values[headerMap.amount]) : 0;
         extra = headerMap.extra !== undefined ? parseNumber(values[headerMap.extra]) : 0;
       } else {
-        // Fallback positional heuristics:
-        // Col 0: S.No or Brand
-        // Col 1: Brand or Size
-        // Following columns: Opening, Indent, Total, Closing, Sale, Rate, Amount
+        // Positional fallback
         if (isNaN(parseFloat(values[0])) && values[0].length > 1) {
           rawBrand = values[0];
           rawSize = values[1] || '';
@@ -303,88 +293,8 @@ const parseSpreadsheetBuffer = async (buffer, filename) => {
   return rowsData;
 };
 
-// Parse PDF documents
-const parsePdfBuffer = async (buffer, filename) => {
-  const data = await pdfParse(buffer);
-  const text = data.text || '';
-  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-
-  const rowsData = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    // Check if line looks like a table row with numbers
-    const tokens = line.split(/\s{2,}|\t/).filter(t => t.trim().length > 0);
-    if (tokens.length >= 4) {
-      const rawBrand = tokens[0];
-      const rawSize = tokens[1];
-      const numbers = tokens.slice(2).map(t => parseNumber(t));
-      if (rawBrand && !rawBrand.toLowerCase().includes('total') && !rawBrand.toLowerCase().includes('brand')) {
-        rowsData.push({
-          sourceFileName: filename,
-          sourcePageIndex: 1,
-          rawBrand,
-          rawSize: rawSize || '750ml',
-          openingStock: Math.round(numbers[0] || 0),
-          indentStock: Math.round(numbers[1] || 0),
-          totalStock: Math.round(numbers[2] || (numbers[0] || 0) + (numbers[1] || 0)),
-          closingStock: Math.round(numbers[3] || 0),
-          saleCount: Math.round(numbers[4] || 0),
-          bottleRate: numbers[5] || 0,
-          saleAmount: numbers[6] || 0,
-          extraAmount: numbers[7] || 0
-        });
-      }
-    }
-  }
-
-  return rowsData;
-};
-
-// Parse Images using Tesseract OCR with safe timeout fallback
-const parseImageBuffer = async (buffer, filename) => {
-  const rowsData = [];
-  if (!Tesseract) return rowsData;
-
-  try {
-    const ocrPromise = Tesseract.recognize(buffer, 'eng');
-    // Set a 20 second timeout so it won't hang indefinitely
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('OCR Timeout')), 20000)
-    );
-
-    const result = await Promise.race([ocrPromise, timeoutPromise]);
-    const text = result && result.data && result.data.text ? result.data.text : '';
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 2);
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      // Skip header lines
-      if (line.toLowerCase().includes('brand') || line.toLowerCase().includes('opening') || line.toLowerCase().includes('closing')) {
-        continue;
-      }
-      const parts = line.split(/[\t,|;]+/).map(p => p.trim()).filter(Boolean);
-      if (parts.length >= 3) {
-        rowsData.push({
-          sourceFileName: filename,
-          sourcePageIndex: 1,
-          rawBrand: parts[0],
-          rawSize: parts[1] || '750ml',
-          openingStock: parseNumber(parts[2]),
-          indentStock: parseNumber(parts[3] || 0),
-          closingStock: parseNumber(parts[4] || 0),
-          bottleRate: parseNumber(parts[5] || 0)
-        });
-      }
-    }
-  } catch (err) {
-    console.warn(`OCR parsing for image ${filename} deferred to manual verification:`, err.message);
-  }
-
-  return rowsData;
-};
-
 /**
- * Main analyze function that parses files and enriches rows with Master Data
+ * Main analyze function that parses spreadsheet files and enriches rows with Master Data
  */
 const analyzeStockFiles = async ({ files, shopId, activeBrands, activeSizes, activeRates }) => {
   // Build lookup maps for rates: `${brandId}_${sizeId}` -> rate
@@ -401,63 +311,27 @@ const analyzeStockFiles = async ({ files, shopId, activeBrands, activeSizes, act
 
   for (let fileIdx = 0; fileIdx < files.length; fileIdx++) {
     const file = files[fileIdx];
-    const originalName = file.originalname || `upload_${fileIdx + 1}`;
+    const originalName = file.originalname || `spreadsheet_${fileIdx + 1}.xlsx`;
     const ext = originalName.split('.').pop().toLowerCase();
-    const mimeType = file.mimetype || '';
-    const isImage = mimeType.startsWith('image/') || ['png', 'jpg', 'jpeg', 'webp'].includes(ext);
-    const isPdf = mimeType === 'application/pdf' || ext === 'pdf';
-    const isSpreadsheet = ['xlsx', 'xls', 'csv'].includes(ext) || mimeType.includes('spreadsheet') || mimeType.includes('excel');
+    const isSpreadsheet = ['xlsx', 'xls', 'csv'].includes(ext);
 
-    // Create a base64 preview representation for browser Document Viewer
-    let previewUrl = null;
-    if (isImage) {
-      previewUrl = `data:${mimeType || 'image/jpeg'};base64,${file.buffer.toString('base64')}`;
+    if (!isSpreadsheet) {
+      continue;
     }
 
-    let extracted = [];
-    if (isSpreadsheet) {
-      extracted = await parseSpreadsheetBuffer(file.buffer, originalName);
-    } else if (isPdf) {
-      extracted = await parsePdfBuffer(file.buffer, originalName);
-    } else if (isImage) {
-      extracted = await parseImageBuffer(file.buffer, originalName);
-    }
+    const extracted = await parseSpreadsheetBuffer(file.buffer, originalName);
 
     fileSummaries.push({
       fileName: originalName,
       fileSize: file.size,
-      fileType: isImage ? 'IMAGE' : isPdf ? 'PDF' : 'SPREADSHEET',
-      rowCount: extracted.length,
-      previewUrl
+      fileType: 'SPREADSHEET',
+      rowCount: extracted.length
     });
 
     rawExtractedRows.push(...extracted);
   }
 
-  // If no rows were parsed from images (e.g. handwritten paper sheets),
-  // we generate pre-seeded brand rows or allow the operator to transcribe directly in the Document Viewer!
-  if (rawExtractedRows.length === 0 && fileSummaries.some(f => f.fileType === 'IMAGE')) {
-    // Populate active brands so the user can easily review and enter quantities side-by-side with the image
-    for (const brand of activeBrands.slice(0, 20)) {
-      const defaultSize = activeSizes.find(s => s.code === '750ml' || s.code === '750') || activeSizes[0];
-      rawExtractedRows.push({
-        sourceFileName: fileSummaries[0].fileName,
-        sourcePageIndex: 1,
-        rawBrand: brand.name,
-        rawSize: defaultSize ? defaultSize.code : '750ml',
-        openingStock: 0,
-        indentStock: 0,
-        totalStock: 0,
-        closingStock: 0,
-        saleCount: 0,
-        bottleRate: 0,
-        saleAmount: 0,
-        extraAmount: 0
-      });
-    }
-  }
-
-  // Validate, match against master, and apply formulas
+  // Validate, match against master, and apply authoritative formulas
   const seenCombos = new Map();
   const processedRows = rawExtractedRows.map((row, index) => {
     const id = `item_${Date.now()}_${index}`;
@@ -548,7 +422,7 @@ const analyzeStockFiles = async ({ files, shopId, activeBrands, activeSizes, act
 
     return {
       id,
-      sourceFileName: row.sourceFileName || 'Uploaded Sheet',
+      sourceFileName: row.sourceFileName || 'Uploaded Spreadsheet',
       sourcePageIndex: row.sourcePageIndex || 1,
       rawBrand: row.rawBrand,
       rawSize: row.rawSize,
@@ -582,7 +456,5 @@ module.exports = {
   matchBrand,
   parseNumber,
   parseSpreadsheetBuffer,
-  parsePdfBuffer,
-  parseImageBuffer,
   analyzeStockFiles
 };

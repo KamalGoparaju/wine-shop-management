@@ -1,11 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import apiClient from '../../api/client';
-import DocumentViewer from './DocumentViewer';
 import {
   UploadCloud,
   FileSpreadsheet,
-  FileText,
-  Image as ImageIcon,
   CheckCircle2,
   AlertTriangle,
   XCircle,
@@ -16,10 +13,8 @@ import {
   ArrowRight,
   ArrowLeft,
   Search,
-  Filter,
   Check,
   RefreshCw,
-  HelpCircle,
   ShieldCheck,
   Calendar,
   Building
@@ -33,7 +28,7 @@ const DailyStockImportModal = ({
   onImportSuccess,
   activeTheme
 }) => {
-  // Wizard Step: 1 = Upload, 2 = Preview & Edit, 3 = Confirmation
+  // Wizard Step: 1 = Upload Spreadsheet, 2 = Verify & Edit Ledger, 3 = Confirm
   const [currentStep, setCurrentStep] = useState(1);
   const [businessDate, setBusinessDate] = useState(defaultDate || new Date().toISOString().slice(0, 10));
   const [files, setFiles] = useState([]);
@@ -60,7 +55,7 @@ const DailyStockImportModal = ({
 
   if (!isOpen) return null;
 
-  // File selection handlers
+  // File selection handlers (strictly Excel and CSV)
   const handleFileDrop = (e) => {
     e.preventDefault();
     setIsDraggingFile(false);
@@ -76,19 +71,19 @@ const DailyStockImportModal = ({
   };
 
   const addFiles = (newFiles) => {
-    const validExtensions = ['png', 'jpg', 'jpeg', 'webp', 'pdf', 'xlsx', 'xls', 'csv'];
+    const validExtensions = ['xlsx', 'xls', 'csv'];
     const filtered = newFiles.filter(f => {
       const ext = f.name.split('.').pop().toLowerCase();
       return validExtensions.includes(ext);
     });
 
     if (filtered.length < newFiles.length) {
-      setErrorMessage('Some files were ignored because their format is not supported (only Images, PDF, Excel, CSV are accepted).');
+      setErrorMessage('Unsupported file format. Please upload only Excel (.xlsx, .xls) or CSV (.csv) spreadsheets.');
     } else {
       setErrorMessage('');
     }
 
-    setFiles(prev => [...prev, ...filtered].slice(0, 10)); // Max 10 files
+    setFiles(prev => [...prev, ...filtered].slice(0, 5)); // Max 5 spreadsheet files
   };
 
   const handleRemoveFile = (index) => {
@@ -98,7 +93,7 @@ const DailyStockImportModal = ({
   // Step 1 -> Step 2: Trigger Backend Staging Analysis
   const handleAnalyzeFiles = async () => {
     if (files.length === 0) {
-      setErrorMessage('Please upload at least one image, PDF, or spreadsheet file.');
+      setErrorMessage('Please upload at least one Excel (.xlsx, .xls) or CSV file.');
       return;
     }
 
@@ -128,11 +123,11 @@ const DailyStockImportModal = ({
         setExistingRecordCount(response.data.existingRecordCount || 0);
         setCurrentStep(2); // Advance to preview
       } else {
-        setErrorMessage(response.message || 'Failed to analyze uploaded files.');
+        setErrorMessage(response.message || 'Failed to analyze uploaded spreadsheets.');
       }
     } catch (err) {
       console.error('Import analysis error:', err);
-      setErrorMessage(err?.message || 'Server error while analyzing stock documents.');
+      setErrorMessage(err?.message || 'Server error while analyzing spreadsheet data.');
     } finally {
       setAnalyzing(false);
     }
@@ -263,12 +258,10 @@ const DailyStockImportModal = ({
   // Filtered rows for the editable ledger grid
   const filteredRows = useMemo(() => {
     return stagedRows.filter(r => {
-      // Filter by status chip
       if (filterStatus === 'VERIFIED' && r.status !== 'VERIFIED') return false;
       if (filterStatus === 'NEEDS_REVIEW' && r.status !== 'NEEDS_REVIEW' && r.status !== 'BRAND_NOT_FOUND' && r.status !== 'SIZE_NOT_FOUND') return false;
       if (filterStatus === 'INVALID' && r.status !== 'INVALID') return false;
 
-      // Filter by search text
       if (searchBrand.trim()) {
         const query = searchBrand.toLowerCase();
         const brandMatch = (r.brandName || r.rawBrand || '').toLowerCase().includes(query);
@@ -336,18 +329,18 @@ const DailyStockImportModal = ({
         {/* Header with Stepper */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3.5 bg-white border-b border-slate-200">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-slate-100 text-slate-700">
-              <UploadCloud className="w-5 h-5" style={{ color: activeTheme?.primary || '#059669' }} />
+            <div className="p-2 rounded-xl bg-teal-50 text-teal-700">
+              <FileSpreadsheet className="w-5 h-5 text-teal-600" />
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                Import Daily Stock Sheet
+                Import Spreadsheet Stock Sheet
                 <span className="text-xs font-normal text-slate-500">
                   ({selectedShop?.name || 'Active Shop'} • {businessDate})
                 </span>
               </h3>
               <p className="text-xs text-slate-500">
-                Mandatory preview & verification before database write
+                Excel & CSV import with mandatory preview & verification before database write
               </p>
             </div>
           </div>
@@ -377,6 +370,7 @@ const DailyStockImportModal = ({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
             title="Close"
@@ -390,7 +384,7 @@ const DailyStockImportModal = ({
           <div className="mx-4 sm:mx-6 mt-3 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
             <span className="flex-1">{errorMessage}</span>
-            <button onClick={() => setErrorMessage('')} className="text-rose-500 hover:text-rose-800">
+            <button type="button" onClick={() => setErrorMessage('')} className="text-rose-500 hover:text-rose-800">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -407,7 +401,7 @@ const DailyStockImportModal = ({
                   <Building className="w-4 h-4 text-slate-500 shrink-0" />
                   <div>
                     <span className="text-slate-500">Destination Shop:</span>
-                    <strong className="block text-slate-800">{selectedShop?.name} ({selectedShop?.code})</strong>
+                    <strong className="block text-slate-800">{selectedShop?.name || 'Selected Shop'} ({selectedShop?.code || '—'})</strong>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -424,7 +418,7 @@ const DailyStockImportModal = ({
                 </div>
               </div>
 
-              {/* Drag and Drop Zone */}
+              {/* Drag and Drop Zone (Excel and CSV only) */}
               <div
                 onDragOver={(e) => { e.preventDefault(); setIsDraggingFile(true); }}
                 onDragLeave={() => setIsDraggingFile(false)}
@@ -440,24 +434,26 @@ const DailyStockImportModal = ({
                   id="file-upload-input"
                   type="file"
                   multiple
-                  accept=".png,.jpg,.jpeg,.webp,.pdf,.xlsx,.xls,.csv"
+                  accept=".xlsx,.xls,.csv"
                   onChange={handleFileInputChange}
                   className="hidden"
                 />
-                <div className="mx-auto w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3">
-                  <UploadCloud className="w-6 h-6" />
+                <div className="mx-auto w-12 h-12 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center mb-3">
+                  <FileSpreadsheet className="w-6 h-6" />
                 </div>
                 <h4 className="text-sm font-bold text-slate-800 mb-1">
-                  Drag & Drop stock documents here, or <span className="text-emerald-700 underline font-semibold">browse files</span>
+                  Drag & Drop stock spreadsheets here, or <span className="text-teal-700 underline font-semibold">browse files</span>
                 </h4>
                 <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  Supports multiple pages of paper stock sheet photos (PNG, JPG), scanned PDFs, and spreadsheets (Excel .xlsx, CSV).
+                  Upload daily stock Excel spreadsheets (.xlsx, .xls) or CSV files. Values will be parsed, matched to Brand and Size Masters, and verified.
                 </p>
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[11px] text-slate-600 font-medium">
-                  <span className="px-2 py-0.5 bg-white border border-slate-200 rounded-md">Handwritten Photos</span>
-                  <span className="px-2 py-0.5 bg-white border border-slate-200 rounded-md">Multi-page PDFs</span>
-                  <span className="px-2 py-0.5 bg-white border border-slate-200 rounded-md">Excel (.xlsx, .xls)</span>
-                  <span className="px-2 py-0.5 bg-white border border-slate-200 rounded-md">CSV</span>
+                  <span className="px-2.5 py-1 bg-white border border-slate-200 rounded-md font-semibold text-teal-800">
+                    Excel (.xlsx, .xls)
+                  </span>
+                  <span className="px-2.5 py-1 bg-white border border-slate-200 rounded-md font-semibold text-teal-800">
+                    CSV (.csv)
+                  </span>
                 </div>
               </div>
 
@@ -465,46 +461,35 @@ const DailyStockImportModal = ({
               {files.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Selected Files ({files.length} / 10)
+                    Selected Spreadsheets ({files.length} / 5)
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {files.map((file, idx) => {
-                      const ext = file.name.split('.').pop().toLowerCase();
-                      const isImg = ['png', 'jpg', 'jpeg', 'webp'].includes(ext);
-                      const isPdf = ext === 'pdf';
-                      return (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl shadow-xs text-xs"
-                        >
-                          <div className="flex items-center gap-2 overflow-hidden">
-                            {isImg ? (
-                              <ImageIcon className="w-4 h-4 text-emerald-600 shrink-0" />
-                            ) : isPdf ? (
-                              <FileText className="w-4 h-4 text-rose-600 shrink-0" />
-                            ) : (
-                              <FileSpreadsheet className="w-4 h-4 text-teal-600 shrink-0" />
-                            )}
-                            <div className="truncate">
-                              <span className="font-semibold text-slate-800 block truncate" title={file.name}>
-                                {file.name}
-                              </span>
-                              <span className="text-[10px] text-slate-600 font-mono">
-                                {(file.size / 1024).toFixed(1)} KB
-                              </span>
-                            </div>
+                    {files.map((file, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl shadow-xs text-xs"
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <FileSpreadsheet className="w-4 h-4 text-teal-600 shrink-0" />
+                          <div className="truncate">
+                            <span className="font-semibold text-slate-800 block truncate" title={file.name}>
+                              {file.name}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              {(file.size / 1024).toFixed(1)} KB
+                            </span>
                           </div>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); handleRemoveFile(idx); }}
-                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
-                            title="Remove file"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
                         </div>
-                      );
-                    })}
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleRemoveFile(idx); }}
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+                          title="Remove file"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -515,14 +500,14 @@ const DailyStockImportModal = ({
                 <div className="space-y-0.5">
                   <span className="font-bold">Zero Direct Save Guarantee:</span>
                   <p className="text-[11px] text-amber-800">
-                    Clicking "Analyze & Preview" only extracts values into an editable workspace. No stock balances or closing entries will be saved to production records until you review the calculations and confirm.
+                    Clicking "Analyze & Preview" only parses spreadsheet rows into an editable workspace. No stock balances or closing entries will be saved to production records until you review the calculations and explicitly confirm.
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* STEP 2: STAGED PREVIEW & EDITABLE LEDGER GRID */}
+          {/* STEP 2: STAGED PREVIEW & EDITABLE FULL-WIDTH LEDGER GRID */}
           {currentStep === 2 && (
             <div className="space-y-4">
               {/* Summary Metrics Bar */}
@@ -553,279 +538,290 @@ const DailyStockImportModal = ({
                 </div>
               </div>
 
-              {/* Split Screen Layout: Left Document Viewer, Right Editable Ledger */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                {/* Left Pane: Document Viewer (4 columns on lg) */}
-                <div className="lg:col-span-4 min-h-[320px]">
-                  <DocumentViewer fileSummaries={fileSummaries} activeTheme={activeTheme} />
+              {/* Full Width Ledger Table */}
+              <div className="flex flex-col space-y-3">
+                {/* Ledger Toolbar & Filters */}
+                <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs">
+                  {/* Status Filters */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setFilterStatus('ALL')}
+                      className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                        filterStatus === 'ALL'
+                          ? 'bg-slate-800 text-white shadow-xs'
+                          : 'text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      All ({summaryMetrics.totalRows})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFilterStatus('NEEDS_REVIEW')}
+                      className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                        filterStatus === 'NEEDS_REVIEW'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'text-amber-700 hover:bg-amber-100'
+                      }`}
+                    >
+                      Review ({summaryMetrics.needsReview})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFilterStatus('INVALID')}
+                      className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                        filterStatus === 'INVALID'
+                          ? 'bg-rose-600 text-white shadow-xs'
+                          : 'text-rose-700 hover:bg-rose-100'
+                      }`}
+                    >
+                      Invalid ({summaryMetrics.invalid})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFilterStatus('VERIFIED')}
+                      className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                        filterStatus === 'VERIFIED'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-emerald-700 hover:bg-emerald-100'
+                      }`}
+                    >
+                      Verified ({summaryMetrics.verified})
+                    </button>
+                  </div>
+
+                  {/* Search & Add Row */}
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={searchBrand}
+                        onChange={(e) => setSearchBrand(e.target.value)}
+                        placeholder="Search brand/size..."
+                        className="pl-8 pr-2.5 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 w-36 sm:w-44"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddNewRow}
+                      className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg font-medium shadow-xs transition-colors"
+                      title="Add row manually"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Add Row</span>
+                    </button>
+                  </div>
                 </div>
 
-                {/* Right Pane: Editable Ledger Table (8 columns on lg) */}
-                <div className="lg:col-span-8 flex flex-col space-y-3">
-                  {/* Ledger Toolbar & Filters */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs">
-                    {/* Status Filters */}
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setFilterStatus('ALL')}
-                        className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                          filterStatus === 'ALL'
-                            ? 'bg-slate-800 text-white shadow-xs'
-                            : 'text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        All ({summaryMetrics.totalRows})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFilterStatus('NEEDS_REVIEW')}
-                        className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                          filterStatus === 'NEEDS_REVIEW'
-                            ? 'bg-amber-600 text-white shadow-xs'
-                            : 'text-amber-700 hover:bg-amber-100'
-                        }`}
-                      >
-                        Review ({summaryMetrics.needsReview})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFilterStatus('INVALID')}
-                        className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                          filterStatus === 'INVALID'
-                            ? 'bg-rose-600 text-white shadow-xs'
-                            : 'text-rose-700 hover:bg-rose-100'
-                        }`}
-                      >
-                        Invalid ({summaryMetrics.invalid})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFilterStatus('VERIFIED')}
-                        className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                          filterStatus === 'VERIFIED'
-                            ? 'bg-emerald-600 text-white shadow-xs'
-                            : 'text-emerald-700 hover:bg-emerald-100'
-                        }`}
-                      >
-                        Verified ({summaryMetrics.verified})
-                      </button>
-                    </div>
-
-                    {/* Search & Add Row */}
-                    <div className="flex items-center gap-2">
-                      <div className="relative">
-                        <Search className="w-3.5 h-3.5 absolute left-2.5 top-2 text-slate-400" />
-                        <input
-                          type="text"
-                          value={searchBrand}
-                          onChange={(e) => setSearchBrand(e.target.value)}
-                          placeholder="Search brand/size..."
-                          className="pl-8 pr-2.5 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 w-36 sm:w-44"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleAddNewRow}
-                        className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg font-medium shadow-xs transition-colors"
-                        title="Add row manually"
-                      >
-                        <Plus className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Add Row</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Grid Table Container */}
-                  <div className="table-grid-wrapper max-h-[380px] overflow-y-auto">
-                    <table className="table-grid w-full text-xs">
-                      <thead>
+                {/* Grid Table Container */}
+                <div className="table-grid-wrapper max-h-[460px] overflow-y-auto">
+                  <table className="table-grid w-full text-xs">
+                    <thead>
+                      <tr>
+                        <th className="w-8 text-center">#</th>
+                        <th className="min-w-[150px]">Brand</th>
+                        <th className="min-w-[80px]">Size</th>
+                        <th className="w-16 text-right">Opening</th>
+                        <th className="w-16 text-right">Indent</th>
+                        <th className="w-16 text-right bg-slate-100">Total</th>
+                        <th className="w-16 text-right">Closing</th>
+                        <th className="w-16 text-right bg-emerald-50 text-emerald-800">Sale</th>
+                        <th className="w-16 text-right">Rate</th>
+                        <th className="w-20 text-right">Stock Value</th>
+                        <th className="w-20 text-right">Amount</th>
+                        <th className="w-16 text-right">Extra Amt</th>
+                        <th className="w-16 text-center">Status</th>
+                        <th className="w-8 text-center"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredRows.length === 0 ? (
                         <tr>
-                          <th className="w-8 text-center">#</th>
-                          <th className="min-w-[130px]">Brand</th>
-                          <th className="min-w-[70px]">Size</th>
-                          <th className="w-14 text-right">Opening</th>
-                          <th className="w-14 text-right">Indent</th>
-                          <th className="w-14 text-right bg-slate-100">Total</th>
-                          <th className="w-14 text-right">Closing</th>
-                          <th className="w-14 text-right bg-emerald-50 text-emerald-800">Sale</th>
-                          <th className="w-16 text-right">Rate</th>
-                          <th className="w-20 text-right">Amount</th>
-                          <th className="w-14 text-center">Status</th>
-                          <th className="w-8 text-center"></th>
+                          <td colSpan={14} className="text-center py-6 text-slate-400 italic">
+                            No records match the current filter.
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {filteredRows.length === 0 ? (
-                          <tr>
-                            <td colSpan={12} className="text-center py-6 text-slate-400 italic">
-                              No records match the current filter.
-                            </td>
-                          </tr>
-                        ) : (
-                          filteredRows.map((row, idx) => {
-                            const isInvalid = row.status === 'INVALID';
-                            const needsReview = row.status === 'NEEDS_REVIEW' || row.status === 'BRAND_NOT_FOUND' || row.status === 'SIZE_NOT_FOUND';
+                      ) : (
+                        filteredRows.map((row, idx) => {
+                          const isInvalid = row.status === 'INVALID';
+                          const needsReview = row.status === 'NEEDS_REVIEW' || row.status === 'BRAND_NOT_FOUND' || row.status === 'SIZE_NOT_FOUND';
 
-                            return (
-                              <tr
-                                key={row.id}
-                                className={`transition-colors ${
-                                  isInvalid ? 'bg-rose-50/50' : needsReview ? 'bg-amber-50/40' : 'hover:bg-slate-50'
-                                }`}
-                              >
-                                <td className="text-center text-slate-400 font-mono text-[11px]">
-                                  {idx + 1}
-                                </td>
+                          return (
+                            <tr
+                              key={row.id}
+                              className={`transition-colors ${
+                                isInvalid ? 'bg-rose-50/50' : needsReview ? 'bg-amber-50/40' : 'hover:bg-slate-50'
+                              }`}
+                            >
+                              <td className="text-center text-slate-400 font-mono text-[11px]">
+                                {idx + 1}
+                              </td>
 
-                                {/* Brand Selector / Name */}
-                                <td>
-                                  {masterBrands.length > 0 ? (
-                                    <select
-                                      value={row.brandId || ''}
-                                      onChange={(e) => handleRowChange(row.id, 'brandId', e.target.value)}
-                                      className={`w-full px-1.5 py-1 text-xs rounded border ${
-                                        !row.brandId ? 'border-amber-400 bg-amber-50 text-amber-900 font-semibold' : 'border-slate-200 bg-white'
-                                      } focus:outline-none focus:ring-1 focus:ring-emerald-500`}
-                                    >
-                                      <option value="">-- Choose Brand --</option>
-                                      {masterBrands.map(b => (
-                                        <option key={b.id} value={b.id}>{b.name}</option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    <span className="font-semibold text-slate-800">{row.brandName || row.rawBrand}</span>
-                                  )}
-                                </td>
-
-                                {/* Size Selector */}
-                                <td>
-                                  {masterSizes.length > 0 ? (
-                                    <select
-                                      value={row.sizeId || ''}
-                                      onChange={(e) => handleRowChange(row.id, 'sizeId', e.target.value)}
-                                      className={`w-full px-1 py-1 text-xs rounded border ${
-                                        !row.sizeId ? 'border-amber-400 bg-amber-50 text-amber-900 font-semibold' : 'border-slate-200 bg-white'
-                                      } focus:outline-none focus:ring-1 focus:ring-emerald-500`}
-                                    >
-                                      <option value="">-- Size --</option>
-                                      {masterSizes.map(s => (
-                                        <option key={s.id} value={s.id}>{s.code}</option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    <span className="font-mono text-slate-600">{row.sizeCode || row.rawSize}</span>
-                                  )}
-                                </td>
-
-                                {/* Opening */}
-                                <td className="text-right">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    value={row.openingStock}
-                                    onChange={(e) => handleRowChange(row.id, 'openingStock', e.target.value)}
-                                    className="w-14 px-1 py-0.5 text-right font-mono text-xs rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                                  />
-                                </td>
-
-                                {/* Indent */}
-                                <td className="text-right">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    value={row.indentStock}
-                                    onChange={(e) => handleRowChange(row.id, 'indentStock', e.target.value)}
-                                    className="w-14 px-1 py-0.5 text-right font-mono text-xs rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                                  />
-                                </td>
-
-                                {/* Total (Calculated) */}
-                                <td className="text-right font-mono font-bold text-slate-800 bg-slate-100">
-                                  {row.totalStock}
-                                </td>
-
-                                {/* Closing */}
-                                <td className="text-right">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    value={row.closingStock}
-                                    onChange={(e) => handleRowChange(row.id, 'closingStock', e.target.value)}
-                                    className={`w-14 px-1 py-0.5 text-right font-mono text-xs rounded border ${
-                                      row.closingStock > row.totalStock
-                                        ? 'border-rose-500 bg-rose-50 text-rose-800 font-bold'
-                                        : 'border-slate-200'
+                              {/* Brand Selector */}
+                              <td>
+                                {masterBrands.length > 0 ? (
+                                  <select
+                                    value={row.brandId || ''}
+                                    onChange={(e) => handleRowChange(row.id, 'brandId', e.target.value)}
+                                    className={`w-full px-1.5 py-1 text-xs rounded border ${
+                                      !row.brandId ? 'border-amber-400 bg-amber-50 text-amber-900 font-semibold' : 'border-slate-200 bg-white'
                                     } focus:outline-none focus:ring-1 focus:ring-emerald-500`}
-                                  />
-                                </td>
-
-                                {/* Sale (Calculated) */}
-                                <td className="text-right font-mono font-bold bg-emerald-50 text-emerald-800">
-                                  {row.saleCount}
-                                </td>
-
-                                {/* Rate */}
-                                <td className="text-right">
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={row.bottleRate}
-                                    onChange={(e) => handleRowChange(row.id, 'bottleRate', e.target.value)}
-                                    className="w-16 px-1 py-0.5 text-right font-mono text-xs rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                                  />
-                                </td>
-
-                                {/* Amount (Calculated) */}
-                                <td className="text-right font-mono font-semibold text-slate-800">
-                                  ₹{row.saleAmount?.toFixed(2)}
-                                </td>
-
-                                {/* Status Chip */}
-                                <td className="text-center">
-                                  {isInvalid ? (
-                                    <span
-                                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 cursor-help"
-                                      title={row.validationIssues?.join('\n') || 'Invalid calculation'}
-                                    >
-                                      <XCircle className="w-3 h-3 text-rose-600" />
-                                      Error
-                                    </span>
-                                  ) : needsReview ? (
-                                    <span
-                                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 cursor-help"
-                                      title={row.validationIssues?.join('\n') || 'Needs review'}
-                                    >
-                                      <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                      Review
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                      OK
-                                    </span>
-                                  )}
-                                </td>
-
-                                {/* Delete Row */}
-                                <td className="text-center">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteRow(row.id)}
-                                    className="text-slate-400 hover:text-rose-600 transition-colors p-1"
-                                    title="Delete row"
                                   >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                                    <option value="">-- Choose Brand --</option>
+                                    {masterBrands.map(b => (
+                                      <option key={b.id} value={b.id}>{b.name}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <span className="font-semibold text-slate-800">{row.brandName || row.rawBrand}</span>
+                                )}
+                              </td>
+
+                              {/* Size Selector */}
+                              <td>
+                                {masterSizes.length > 0 ? (
+                                  <select
+                                    value={row.sizeId || ''}
+                                    onChange={(e) => handleRowChange(row.id, 'sizeId', e.target.value)}
+                                    className={`w-full px-1 py-1 text-xs rounded border ${
+                                      !row.sizeId ? 'border-amber-400 bg-amber-50 text-amber-900 font-semibold' : 'border-slate-200 bg-white'
+                                    } focus:outline-none focus:ring-1 focus:ring-emerald-500`}
+                                  >
+                                    <option value="">-- Size --</option>
+                                    {masterSizes.map(s => (
+                                      <option key={s.id} value={s.id}>{s.code}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <span className="font-mono text-slate-600">{row.sizeCode || row.rawSize}</span>
+                                )}
+                              </td>
+
+                              {/* Opening */}
+                              <td className="text-right">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={row.openingStock}
+                                  onChange={(e) => handleRowChange(row.id, 'openingStock', e.target.value)}
+                                  className="w-16 px-1.5 py-0.5 text-right font-mono text-xs rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                />
+                              </td>
+
+                              {/* Indent */}
+                              <td className="text-right">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={row.indentStock}
+                                  onChange={(e) => handleRowChange(row.id, 'indentStock', e.target.value)}
+                                  className="w-16 px-1.5 py-0.5 text-right font-mono text-xs rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                />
+                              </td>
+
+                              {/* Total (Calculated) */}
+                              <td className="text-right font-mono font-bold text-slate-800 bg-slate-100">
+                                {row.totalStock}
+                              </td>
+
+                              {/* Closing */}
+                              <td className="text-right">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={row.closingStock}
+                                  onChange={(e) => handleRowChange(row.id, 'closingStock', e.target.value)}
+                                  className={`w-16 px-1.5 py-0.5 text-right font-mono text-xs rounded border ${
+                                    row.closingStock > row.totalStock
+                                      ? 'border-rose-500 bg-rose-50 text-rose-800 font-bold'
+                                      : 'border-slate-200'
+                                  } focus:outline-none focus:ring-1 focus:ring-emerald-500`}
+                                />
+                              </td>
+
+                              {/* Sale (Calculated) */}
+                              <td className="text-right font-mono font-bold bg-emerald-50 text-emerald-800">
+                                {row.saleCount}
+                              </td>
+
+                              {/* Rate */}
+                              <td className="text-right">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={row.bottleRate}
+                                  onChange={(e) => handleRowChange(row.id, 'bottleRate', e.target.value)}
+                                  className="w-16 px-1.5 py-0.5 text-right font-mono text-xs rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                />
+                              </td>
+
+                              {/* Stock Value */}
+                              <td className="text-right font-mono text-slate-600">
+                                ₹{row.stockValue?.toFixed(2)}
+                              </td>
+
+                              {/* Sale Amount (Calculated) */}
+                              <td className="text-right font-mono font-bold text-slate-800">
+                                ₹{row.saleAmount?.toFixed(2)}
+                              </td>
+
+                              {/* Extra Amount */}
+                              <td className="text-right">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={row.extraAmount}
+                                  onChange={(e) => handleRowChange(row.id, 'extraAmount', e.target.value)}
+                                  className="w-16 px-1.5 py-0.5 text-right font-mono text-xs rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                  title="Informational only (excluded from total business)"
+                                />
+                              </td>
+
+                              {/* Status Chip */}
+                              <td className="text-center">
+                                {isInvalid ? (
+                                  <span
+                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 cursor-help"
+                                    title={row.validationIssues?.join('\n') || 'Invalid calculation'}
+                                  >
+                                    <XCircle className="w-3 h-3 text-rose-600" />
+                                    Error
+                                  </span>
+                                ) : needsReview ? (
+                                  <span
+                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 cursor-help"
+                                    title={row.validationIssues?.join('\n') || 'Needs review'}
+                                  >
+                                    <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                    Review
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                    OK
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Delete Row */}
+                              <td className="text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteRow(row.id)}
+                                  className="text-slate-400 hover:text-rose-600 transition-colors p-1"
+                                  title="Delete row"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
@@ -840,7 +836,7 @@ const DailyStockImportModal = ({
                 </div>
                 <h4 className="text-base font-bold text-slate-800">Final Verification & Reconciliation</h4>
                 <p className="text-xs text-slate-500">
-                  Please review the aggregated import summary below before committing changes into the daily stock register.
+                  Please review the aggregated spreadsheet import summary below before committing changes into the daily stock register.
                 </p>
               </div>
 
@@ -849,7 +845,7 @@ const DailyStockImportModal = ({
                 <div className="grid grid-cols-2 gap-3 pb-3 border-b border-slate-200 text-xs">
                   <div>
                     <span className="text-slate-500 block">Target Shop:</span>
-                    <strong className="text-slate-800 font-semibold">{selectedShop?.name} ({selectedShop?.code})</strong>
+                    <strong className="text-slate-800 font-semibold">{selectedShop?.name || 'Selected Shop'} ({selectedShop?.code || '—'})</strong>
                   </div>
                   <div>
                     <span className="text-slate-500 block">Business Date:</span>
@@ -968,7 +964,7 @@ const DailyStockImportModal = ({
                   className="mt-0.5 w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
                 />
                 <span className="text-emerald-950 font-medium">
-                  I confirm that I have reviewed the extracted values against the original documents, and all totals, closing counts, and rates are verified.
+                  I confirm that I have verified the extracted values against the uploaded spreadsheet, and all totals, closing counts, and rates are verified.
                 </span>
               </label>
             </div>
@@ -1009,12 +1005,12 @@ const DailyStockImportModal = ({
                 type="button"
                 onClick={handleAnalyzeFiles}
                 disabled={files.length === 0 || analyzing}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-50"
               >
                 {analyzing ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Analyzing Documents...</span>
+                    <span>Analyzing Spreadsheet...</span>
                   </>
                 ) : (
                   <>
