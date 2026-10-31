@@ -32,10 +32,10 @@ const Sidebar = ({ isOpen = false, onClose }) => {
     { name: 'Shop Management', path: '/shops', icon: Store, adminOnly: true },
     { name: 'Brands', path: '/brands', icon: Wine, adminOnly: true },
     { name: 'Size Master', path: '/sizes', icon: Layers, adminOnly: true },
-    { name: 'Products', path: '/products', icon: PackageCheck },
-    { name: 'Stock Entry', path: '/stock/entry', icon: PlusCircle, adminOnly: true },
-    { name: 'Inventory Stock', path: '/stock/list', icon: Box },
-    { name: 'Reports', path: '/reports', icon: BarChart3 },
+    // { name: 'Products', path: '/products', icon: PackageCheck },
+    // { name: 'Stock Entry', path: '/stock/entry', icon: PlusCircle, adminOnly: true },
+    // { name: 'Inventory Stock', path: '/stock/list', icon: Box },
+    // { name: 'Reports', path: '/reports', icon: BarChart3 },
   ];
 
   const handleNavClick = () => {
