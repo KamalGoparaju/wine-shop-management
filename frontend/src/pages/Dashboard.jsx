@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import ThemeSelector from '../components/ThemeSelector';
 
 const Dashboard = () => {
   const { selectedShop } = useAuth();
@@ -305,9 +304,6 @@ const Dashboard = () => {
             </button>
           </div>
         </div>
-
-        {/* Dynamic Theme Customization Settings Card */}
-        <ThemeSelector variant="card" />
 
         {/* 10 Required Financial Summary Cards Grid */}
         <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3.5">

@@ -86,6 +86,56 @@ const ThemeSelector = ({ variant = 'card', className = '' }) => {
     );
   }
 
+  // Sidebar embedded variant
+  if (variant === 'sidebar') {
+    return (
+      <div className={`p-3 rounded-xl bg-white border border-slate-200 shadow-2xs ${className}`}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+            <Palette className="w-3.5 h-3.5" style={{ color: activeTheme.primary }} />
+            Theme Customization
+          </span>
+          <span
+            className="text-[10px] font-bold px-1.5 py-0.5 rounded-full border"
+            style={{
+              backgroundColor: activeTheme.light,
+              color: activeTheme.primary,
+              borderColor: activeTheme.border
+            }}
+          >
+            {activeTheme.label}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-6 gap-1.5 pt-0.5">
+          {themes.map((theme) => {
+            const isSelected = theme.id === activeTheme.id;
+            return (
+              <button
+                key={theme.id}
+                type="button"
+                onClick={() => selectTheme(theme.id)}
+                className={`relative w-7 h-7 mx-auto rounded-full flex items-center justify-center transition-all ${
+                  isSelected
+                    ? 'ring-2 ring-offset-1.5 scale-110 shadow-xs'
+                    : 'hover:scale-105 opacity-85 hover:opacity-100'
+                }`}
+                style={{
+                  backgroundColor: theme.primary,
+                  outlineColor: isSelected ? theme.primary : 'transparent'
+                }}
+                title={`${theme.name} (${theme.label})`}
+                aria-label={`Select ${theme.name} theme`}
+              >
+                {isSelected && <Check className="w-3.5 h-3.5 text-white stroke-[2.5]" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   // Settings Card Variant (Default)
   return (
     <div className={`bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs ${className}`}>
