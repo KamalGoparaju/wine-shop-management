@@ -1,30 +1,42 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Mail, AlertCircle, Wine } from 'lucide-react';
+import { Lock, Mail, AlertCircle, Loader2, Server, RefreshCw } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('admin@wineshop.com');
   const [password, setPassword] = useState('Admin@123');
   const [error, setError] = useState('');
+  const [isServerStarting, setIsServerStarting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setError('');
+    setIsServerStarting(false);
     setSubmitting(true);
+
+    // If server takes longer than 3.5s, it is likely cold-booting on Render free tier
+    const coldBootTimer = setTimeout(() => {
+      setIsServerStarting(true);
+    }, 3500);
 
     try {
       const res = await login(email, password);
+      clearTimeout(coldBootTimer);
       if (res.success) {
         navigate('/dashboard');
       }
     } catch (err) {
-      setError(err?.message || 'Login failed. Please check your credentials.');
+      clearTimeout(coldBootTimer);
+      setIsServerStarting(false);
+      const msg = err?.message || 'Login failed. Please check your credentials.';
+      setError(msg);
     } finally {
+      clearTimeout(coldBootTimer);
       setSubmitting(false);
     }
   };
@@ -40,10 +52,35 @@ const Login = () => {
           <p className="text-xs sm:text-sm text-slate-400 mt-1">Sign in to manage inventory & sales</p>
         </div>
 
+        {isServerStarting && (
+          <div className="p-3.5 sm:p-4 rounded-xl bg-amber-950/40 border border-amber-700/50 text-amber-300 text-xs sm:text-sm flex items-start gap-3 animate-pulse">
+            <Server className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-amber-400 mt-0.5" />
+            <div>
+              <p className="font-semibold text-amber-200">Waking up backend server...</p>
+              <p className="text-[11px] sm:text-xs text-amber-300/80 mt-0.5">
+                The Render server spins down after inactivity. The first connect takes ~30–50s. Please hold on...
+              </p>
+            </div>
+          </div>
+        )}
+
         {error && (
-          <div className="p-3.5 sm:p-4 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs sm:text-sm flex items-center gap-3">
-            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-rose-400" />
-            <span>{error}</span>
+          <div className="p-3.5 sm:p-4 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs sm:text-sm flex flex-col gap-2">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-rose-400" />
+              <span className="font-medium">{error}</span>
+            </div>
+            {(error.includes('waking up') || error.includes('busy') || error.includes('reach')) && (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="mt-1 self-start inline-flex items-center gap-1.5 px-3 py-1 bg-rose-900/60 hover:bg-rose-800 text-rose-200 rounded-lg text-xs font-semibold transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Retry Connection
+              </button>
+            )}
           </div>
         )}
 
@@ -85,15 +122,32 @@ const Login = () => {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full py-3 px-4 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-xl shadow-lg shadow-amber-900/30 transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 text-xs sm:text-sm mt-2"
+            className="w-full py-3 px-4 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-xl shadow-lg shadow-amber-900/30 transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 text-xs sm:text-sm mt-2 flex items-center justify-center gap-2"
           >
-            {submitting ? 'Signing in...' : 'Sign In'}
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                <span>{isServerStarting ? 'Waking up server (~30s)...' : 'Signing in...'}</span>
+              </>
+            ) : (
+              'Sign In'
+            )}
           </button>
         </form>
 
         <div className="pt-4 border-t border-slate-800 text-center">
           <p className="text-[11px] sm:text-xs text-slate-500">
-            Default Admin: <span className="text-slate-300 font-mono">admin@wineshop.com</span> / <span className="text-slate-300 font-mono">Admin@123</span>
+            Default Admin:{' '}
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('admin@wineshop.com');
+                setPassword('Admin@123');
+              }}
+              className="text-amber-400 hover:text-amber-300 font-mono underline decoration-dotted underline-offset-2 cursor-pointer transition-colors"
+            >
+              admin@wineshop.com / Admin@123
+            </button>
           </p>
         </div>
       </div>

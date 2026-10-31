@@ -32,18 +32,52 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor for auth errors
+// Response interceptor for auth errors & error normalization
 apiClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+    const status = error.response?.status;
+    if (status === 401 || status === 403) {
       if (window.location.pathname !== '/login') {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';
       }
     }
-    return Promise.reject(error.response ? error.response.data : error);
+
+    let normalizedError;
+    if (error.response) {
+      if (typeof error.response.data === 'string') {
+        normalizedError = {
+          status,
+          message:
+            status === 502 || status === 503 || status === 504
+              ? 'Server is starting up or temporarily busy. Please try again in a few seconds.'
+              : error.response.data || 'Server error',
+          data: error.response.data
+        };
+      } else if (error.response.data && typeof error.response.data === 'object') {
+        normalizedError = {
+          status,
+          message: error.response.data.message || error.response.data.error || 'Server request failed',
+          ...error.response.data
+        };
+      } else {
+        normalizedError = { status, message: error.message || 'Server error' };
+      }
+    } else if (error.code === 'ECONNABORTED' || error.message?.includes('Network Error')) {
+      normalizedError = {
+        status: 0,
+        message: 'Unable to reach the server. The Render backend may be waking up from sleep. Please wait ~30s and try again.'
+      };
+    } else {
+      normalizedError = {
+        status: 0,
+        message: error.message || 'Network request failed'
+      };
+    }
+
+    return Promise.reject(normalizedError);
   }
 );
 

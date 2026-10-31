@@ -49,8 +49,13 @@ export const AuthProvider = ({ children }) => {
             }
           }
         })
-        .catch(() => {
-          logout();
+        .catch((err) => {
+          // Only clear session if token is truly invalid/expired (401 or 403)
+          if (err?.status === 401 || err?.status === 403) {
+            logout();
+          } else {
+            console.warn('Backend temporarily unreachable during refresh; retaining local session:', err?.message);
+          }
         })
         .finally(() => setLoading(false));
     } else {
