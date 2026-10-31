@@ -1,6 +1,7 @@
 const axios = require('axios');
 
-const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || `http://127.0.0.1:${process.env.INVENTORY_PORT || 5002}`;
+const sanitizeLocalUrl = (url) => (url ? url.replace('localhost', '127.0.0.1') : url);
+const INVENTORY_SERVICE_URL = sanitizeLocalUrl(process.env.INVENTORY_SERVICE_URL) || `http://127.0.0.1:${process.env.INVENTORY_PORT || 5002}`;
 
 // Fetch bottle details & validate stock status via Inventory Service API
 const lookupBottleBySerial = async (serialNumber) => {

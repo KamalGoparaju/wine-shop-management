@@ -9,9 +9,10 @@ const errorHandler = require('./middleware/error.middleware');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || `http://127.0.0.1:${process.env.AUTH_PORT || 5001}`;
-const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || `http://127.0.0.1:${process.env.INVENTORY_PORT || 5002}`;
-const SALES_SERVICE_URL = process.env.SALES_SERVICE_URL || `http://127.0.0.1:${process.env.SALES_PORT || 5003}`;
+const sanitizeLocalUrl = (url) => (url ? url.replace('localhost', '127.0.0.1') : url);
+const AUTH_SERVICE_URL = sanitizeLocalUrl(process.env.AUTH_SERVICE_URL) || `http://127.0.0.1:${process.env.AUTH_PORT || 5001}`;
+const INVENTORY_SERVICE_URL = sanitizeLocalUrl(process.env.INVENTORY_SERVICE_URL) || `http://127.0.0.1:${process.env.INVENTORY_PORT || 5002}`;
+const SALES_SERVICE_URL = sanitizeLocalUrl(process.env.SALES_SERVICE_URL) || `http://127.0.0.1:${process.env.SALES_PORT || 5003}`;
 
 // Configurable CORS for production deployment
 const corsOrigins = process.env.CORS_ORIGIN
