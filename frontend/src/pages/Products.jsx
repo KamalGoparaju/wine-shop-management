@@ -272,30 +272,30 @@ const Products = () => {
               </div>
 
               {/* Desktop Table (>= md) */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-700">
-                  <thead className="bg-slate-50 text-slate-600 uppercase text-[11px] font-semibold border-b border-slate-200">
+              <div className="hidden md:block table-grid-wrapper">
+                <table className="table-grid">
+                  <thead>
                     <tr>
-                      <th className="px-6 py-3.5">Product Name</th>
-                      <th className="px-6 py-3.5">Brand</th>
-                      <th className="px-6 py-3.5">Volume</th>
-                      <th className="px-6 py-3.5 text-center">Bottles/Box</th>
-                      <th className="px-6 py-3.5 text-right">Default Bottle Price</th>
-                      <th className="px-6 py-3.5 text-right">Default Box Price</th>
-                      <th className="px-6 py-3.5 text-center">Status</th>
-                      <th className="px-6 py-3.5 text-right">Actions</th>
+                      <th>Product Name</th>
+                      <th className="w-40">Brand</th>
+                      <th className="w-24 text-center">Volume</th>
+                      <th className="w-24 text-center">Bottles/Box</th>
+                      <th className="w-32 text-right">Default Bottle Price</th>
+                      <th className="w-32 text-right">Default Box Price</th>
+                      <th className="w-28 text-center">Status</th>
+                      <th className="w-36 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="text-sm">
                     {products.map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-6 py-4 font-bold text-slate-900">{p.name}</td>
-                        <td className="px-6 py-4 text-slate-600">{p.brand?.name || '—'}</td>
-                        <td className="px-6 py-4 font-mono text-xs font-bold" style={{ color: activeTheme.primary }}>{p.bottleVolume}</td>
-                        <td className="px-6 py-4 text-center font-bold text-slate-800">{p.bottlesPerBox}</td>
-                        <td className="px-6 py-4 text-right font-mono text-emerald-600 font-bold">₹{p.defaultBottlePrice}</td>
-                        <td className="px-6 py-4 text-right font-mono text-emerald-600 font-bold">₹{p.defaultBoxPrice}</td>
-                        <td className="px-6 py-4 text-center">
+                      <tr key={p.id}>
+                        <td className="font-bold text-slate-900">{p.name}</td>
+                        <td className="text-slate-600">{p.brand?.name || '—'}</td>
+                        <td className="text-center font-mono text-xs font-bold" style={{ color: activeTheme.primary }}>{p.bottleVolume}</td>
+                        <td className="text-center font-bold text-slate-800">{p.bottlesPerBox}</td>
+                        <td className="text-right font-mono text-emerald-600 font-bold">₹{p.defaultBottlePrice}</td>
+                        <td className="text-right font-mono text-emerald-600 font-bold">₹{p.defaultBoxPrice}</td>
+                        <td className="text-center">
                           <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border ${
                             p.isActive
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
@@ -305,7 +305,7 @@ const Products = () => {
                             {p.isActive ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                        <td className="text-right space-x-2 whitespace-nowrap">
                           <button
                             onClick={() => handleOpenEdit(p)}
                             className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors"

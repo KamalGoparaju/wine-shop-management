@@ -406,34 +406,34 @@ const Sizes = () => {
               </div>
 
               {/* Desktop Table (>= md) */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-700">
-                  <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] font-bold border-b border-slate-200 whitespace-nowrap">
+              <div className="hidden md:block table-grid-wrapper">
+                <table className="table-grid">
+                  <thead>
                     <tr>
-                      <th className="px-4 py-3 text-center">S.No.</th>
-                      <th className="px-4 py-3">Code / Abbr</th>
-                      <th className="px-4 py-3">Display Name</th>
-                      <th className="px-4 py-3 text-right">Volume</th>
-                      <th className="px-4 py-3">Description</th>
-                      <th className="px-4 py-3 text-center">Referenced In</th>
-                      <th className="px-4 py-3 text-center">Status</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
+                      <th className="w-16 text-center">S.No.</th>
+                      <th className="w-28 text-center">Code / Abbr</th>
+                      <th className="w-40">Display Name</th>
+                      <th className="w-24 text-right">Volume</th>
+                      <th>Description</th>
+                      <th className="w-36 text-center">Referenced In</th>
+                      <th className="w-28 text-center">Status</th>
+                      <th className="w-24 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 font-sans">
+                  <tbody className="text-xs font-sans">
                     {sizes.map((s, idx) => {
                       const ratesCount = s._count?.rates || 0;
                       const stockCount = s._count?.dailyStockRecords || 0;
                       const isReferenced = ratesCount > 0 || stockCount > 0;
 
                       return (
-                        <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="px-4 py-3.5 text-center text-slate-500 font-mono">
+                        <tr key={s.id}>
+                          <td className="text-center text-slate-500 font-mono">
                             {idx + 1}
                           </td>
-                          <td className="px-4 py-3.5">
+                          <td className="text-center">
                             <span
-                              className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono font-bold border"
+                              className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-mono font-bold border"
                               style={{
                                 backgroundColor: activeTheme.light,
                                 color: activeTheme.primary,
@@ -443,16 +443,16 @@ const Sizes = () => {
                               {s.code}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5 font-bold text-slate-900">
+                          <td className="font-bold text-slate-900">
                             {s.name}
                           </td>
-                          <td className="px-4 py-3.5 text-right font-mono text-slate-600">
+                          <td className="text-right font-mono text-slate-600">
                             {s.volumeMl ? `${s.volumeMl} ml` : '—'}
                           </td>
-                          <td className="px-4 py-3.5 text-slate-500 max-w-xs truncate">
+                          <td className="text-slate-500 max-w-xs truncate">
                             {s.description || '—'}
                           </td>
-                          <td className="px-4 py-3.5 text-center">
+                          <td className="text-center">
                             <span 
                               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border ${
                                 isReferenced

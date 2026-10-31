@@ -207,28 +207,28 @@ const Brands = () => {
               </div>
 
               {/* Desktop Table (>= md) */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-700">
-                  <thead className="bg-slate-50 text-slate-600 uppercase text-[11px] font-semibold border-b border-slate-200">
+              <div className="hidden md:block table-grid-wrapper">
+                <table className="table-grid">
+                  <thead>
                     <tr>
-                      <th className="px-4 py-3.5 text-center">S.No.</th>
-                      <th className="px-6 py-3.5">Brand Name</th>
-                      <th className="px-6 py-3.5">Description</th>
-                      <th className="px-6 py-3.5 text-center">Products</th>
-                      <th className="px-6 py-3.5 text-center">Status</th>
-                      <th className="px-6 py-3.5 text-right">Actions</th>
+                      <th className="w-16 text-center">S.No.</th>
+                      <th className="w-48">Brand Name</th>
+                      <th>Description</th>
+                      <th className="w-24 text-center">Products</th>
+                      <th className="w-28 text-center">Status</th>
+                      <th className="w-36 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="text-sm">
                     {brands.map((b, idx) => (
-                      <tr key={b.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-4 py-4 text-center font-bold text-slate-600 font-mono">
+                      <tr key={b.id}>
+                        <td className="text-center font-bold text-slate-600 font-mono">
                           #{b.serialNo || idx + 1}
                         </td>
-                        <td className="px-6 py-4 font-bold text-slate-900">{b.name}</td>
-                        <td className="px-6 py-4 text-slate-500">{b.description || '—'}</td>
-                        <td className="px-6 py-4 text-center font-bold text-slate-800">{b._count?.products || 0}</td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="font-bold text-slate-900">{b.name}</td>
+                        <td className="text-slate-500">{b.description || '—'}</td>
+                        <td className="text-center font-bold text-slate-800">{b._count?.products || 0}</td>
+                        <td className="text-center">
                           <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border ${
                             b.isActive
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
@@ -238,7 +238,7 @@ const Brands = () => {
                             {b.isActive ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                        <td className="text-right space-x-2 whitespace-nowrap">
                           <button
                             onClick={() => handleOpenEdit(b)}
                             className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors"

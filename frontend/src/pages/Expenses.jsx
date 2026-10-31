@@ -295,22 +295,22 @@ const Expenses = () => {
               </div>
 
               {/* Desktop Table (>= md) */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-700">
-                  <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] font-semibold border-b border-slate-200">
+              <div className="hidden md:block table-grid-wrapper">
+                <table className="table-grid">
+                  <thead>
                     <tr>
-                      <th className="px-4 py-3">Category</th>
-                      <th className="px-4 py-3">Description</th>
-                      <th className="px-4 py-3">Recipient</th>
-                      <th className="px-4 py-3">Payment</th>
-                      <th className="px-4 py-3 text-right">Amount</th>
-                      <th className="px-4 py-3 text-right">Action</th>
+                      <th className="w-32">Category</th>
+                      <th>Description</th>
+                      <th className="w-36">Recipient</th>
+                      <th className="w-28 text-center">Payment</th>
+                      <th className="w-32 text-right">Amount</th>
+                      <th className="w-20 text-center">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 font-mono">
+                  <tbody className="font-mono text-xs">
                     {expenses.map((exp) => (
-                      <tr key={exp.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-4 py-3">
+                      <tr key={exp.id}>
+                        <td>
                           <span
                             className="px-2 py-0.5 rounded-full text-[10px] font-bold border"
                             style={{
@@ -322,13 +322,13 @@ const Expenses = () => {
                             {exp.category}
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-sans font-semibold text-slate-900">{exp.description}</td>
-                        <td className="px-4 py-3 text-slate-600 font-sans">{exp.recipient || '—'}</td>
-                        <td className="px-4 py-3 text-slate-600">{exp.paymentMethod}</td>
-                        <td className="px-4 py-3 text-right font-bold text-rose-600 font-sans">
+                        <td className="font-sans font-semibold text-slate-900">{exp.description}</td>
+                        <td className="text-slate-600 font-sans">{exp.recipient || '—'}</td>
+                        <td className="text-center text-slate-600">{exp.paymentMethod}</td>
+                        <td className="text-right font-bold text-rose-600 font-sans">
                           ₹{parseFloat(exp.amount).toFixed(2)}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="text-center">
                           <button
                             onClick={() => handleDeleteExpense(exp.id)}
                             className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors"

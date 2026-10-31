@@ -521,33 +521,33 @@ const Dashboard = () => {
               No daily stock recorded for {businessDate}. Click "Open Full Daily Sheet" to enter stock.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-700 min-w-[640px]">
-                <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold border-b border-slate-200">
+            <div className="table-grid-wrapper">
+              <table className="table-grid min-w-[640px]">
+                <thead>
                   <tr>
-                    <th className="px-3.5 py-2.5">Brand</th>
-                    <th className="px-2.5 py-2.5 text-center">Size</th>
-                    <th className="px-2.5 py-2.5 text-center font-mono">Opening</th>
-                    <th className="px-2.5 py-2.5 text-center font-mono">Indent</th>
-                    <th className="px-2.5 py-2.5 text-center font-mono">Total</th>
-                    <th className="px-2.5 py-2.5 text-center font-mono">Closing</th>
-                    <th className="px-2.5 py-2.5 text-center font-mono" style={{ color: activeTheme.primary }}>Sale</th>
-                    <th className="px-3 py-2.5 text-right font-mono">Rate</th>
-                    <th className="px-3.5 py-2.5 text-right font-mono text-emerald-700">Amount (₹)</th>
+                    <th>Brand</th>
+                    <th className="text-center">Size</th>
+                    <th className="text-center font-mono">Opening</th>
+                    <th className="text-center font-mono">Indent</th>
+                    <th className="text-center font-mono">Total</th>
+                    <th className="text-center font-mono">Closing</th>
+                    <th className="text-center font-mono" style={{ color: activeTheme.primary }}>Sale</th>
+                    <th className="text-right font-mono">Rate</th>
+                    <th className="text-right font-mono text-emerald-700">Amount (₹)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-mono">
+                <tbody className="font-mono text-xs">
                   {dailyRecords.map((r, i) => (
-                    <tr key={r.id || i} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-3.5 py-2.5 font-sans font-bold text-slate-900 truncate max-w-[150px]">{r.brand?.name}</td>
-                      <td className="px-2.5 py-2.5 text-center font-bold" style={{ color: activeTheme.primary }}>{r.size?.code}</td>
-                      <td className="px-2.5 py-2.5 text-center text-slate-500">{r.openingStock}</td>
-                      <td className="px-2.5 py-2.5 text-center text-indigo-600">{r.indentStock}</td>
-                      <td className="px-2.5 py-2.5 text-center font-bold text-slate-900">{r.totalStock}</td>
-                      <td className="px-2.5 py-2.5 text-center text-emerald-700 font-bold">{r.closingStock}</td>
-                      <td className="px-2.5 py-2.5 text-center font-bold" style={{ color: activeTheme.primary }}>{r.saleCount}</td>
-                      <td className="px-3 py-2.5 text-right text-slate-500">₹{r.bottleRate}</td>
-                      <td className="px-3.5 py-2.5 text-right font-bold text-emerald-700 font-sans">
+                    <tr key={r.id || i}>
+                      <td className="font-sans font-bold text-slate-900 truncate max-w-[150px]">{r.brand?.name}</td>
+                      <td className="text-center font-bold" style={{ color: activeTheme.primary }}>{r.size?.code}</td>
+                      <td className="text-center text-slate-600">{r.openingStock}</td>
+                      <td className="text-center text-indigo-600 font-bold">{r.indentStock}</td>
+                      <td className="text-center font-bold text-slate-900">{r.totalStock}</td>
+                      <td className="text-center text-emerald-700 font-bold">{r.closingStock}</td>
+                      <td className="text-center font-bold" style={{ color: activeTheme.primary }}>{r.saleCount}</td>
+                      <td className="text-right text-slate-600">₹{r.bottleRate}</td>
+                      <td className="text-right font-bold text-emerald-700 font-sans">
                         ₹{parseFloat(r.saleAmount).toFixed(2)}
                       </td>
                     </tr>

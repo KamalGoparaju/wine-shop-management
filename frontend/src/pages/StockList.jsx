@@ -207,46 +207,46 @@ const StockList = () => {
               </div>
 
               {/* Desktop Table (>= md) */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-700">
-                  <thead className="bg-slate-50 text-slate-600 uppercase text-[11px] font-semibold border-b border-slate-200">
+              <div className="hidden md:block table-grid-wrapper">
+                <table className="table-grid">
+                  <thead>
                     <tr>
-                      <th className="px-6 py-3.5">Product Name</th>
-                      <th className="px-6 py-3.5">Brand</th>
-                      <th className="px-6 py-3.5 text-center">Boxes</th>
-                      <th className="px-6 py-3.5 text-center">Bottles/Box</th>
-                      <th className="px-6 py-3.5 text-center">Total Bottles</th>
-                      <th className="px-6 py-3.5 text-right">Box Price</th>
-                      <th className="px-6 py-3.5 text-right">Date</th>
-                      <th className="px-6 py-3.5 text-right">Actions</th>
+                      <th>Product Name</th>
+                      <th className="w-40">Brand</th>
+                      <th className="w-20 text-center">Boxes</th>
+                      <th className="w-24 text-center">Bottles/Box</th>
+                      <th className="w-28 text-center">Total Bottles</th>
+                      <th className="w-28 text-right">Box Price</th>
+                      <th className="w-28 text-right">Date</th>
+                      <th className="w-36 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="text-sm">
                     {entries.map((entry) => (
-                      <tr key={entry.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-6 py-4 font-bold text-slate-900">{entry.product?.name}</td>
-                        <td className="px-6 py-4 text-slate-600">{entry.product?.brand?.name}</td>
-                        <td className="px-6 py-4 text-center font-bold text-slate-800">{entry.numberOfBoxes}</td>
-                        <td className="px-6 py-4 text-center text-slate-600">{entry.bottlesPerBox}</td>
-                        <td className="px-6 py-4 text-center font-bold text-emerald-600 font-mono">{entry.totalBottles}</td>
-                        <td className="px-6 py-4 text-right font-mono text-slate-700">₹{entry.boxPrice}</td>
-                        <td className="px-6 py-4 text-right text-xs text-slate-500 font-mono">
+                      <tr key={entry.id}>
+                        <td className="font-bold text-slate-900">{entry.product?.name}</td>
+                        <td className="text-slate-600">{entry.product?.brand?.name}</td>
+                        <td className="text-center font-bold text-slate-800 font-mono">{entry.numberOfBoxes}</td>
+                        <td className="text-center text-slate-600 font-mono">{entry.bottlesPerBox}</td>
+                        <td className="text-center font-bold text-emerald-600 font-mono">{entry.totalBottles}</td>
+                        <td className="text-right font-mono text-slate-700">₹{entry.boxPrice}</td>
+                        <td className="text-right text-xs text-slate-500 font-mono">
                           {new Date(entry.createdAt).toLocaleDateString()}
                         </td>
-                        <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                        <td className="text-right space-x-2 whitespace-nowrap">
                           <Link
                             to={`/stock/details/${entry.id}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 text-xs font-semibold rounded-lg border border-slate-200 transition-colors shadow-2xs"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-800 text-xs font-semibold rounded-lg border border-slate-200 transition-colors shadow-2xs"
                           >
                             <Eye className="w-3.5 h-3.5" style={{ color: activeTheme.primary }} />
                             View Serials
                           </Link>
                           <button
                             onClick={() => handleDelete(entry)}
-                            className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors border border-rose-200"
+                            className="p-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors border border-rose-200"
                             title="Delete Unused Stock Entry"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </td>
                       </tr>

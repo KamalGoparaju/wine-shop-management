@@ -116,3 +116,68 @@
   border-radius: 1rem;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
+
+/* Professional Financial Ledger Table Grid System */
+.table-grid-wrapper {
+  overflow-x: auto;
+  border: 1px solid #CBD5E1;
+  border-radius: 0.75rem;
+  background-color: #FFFFFF;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+}
+
+.table-grid {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table-grid th {
+  background-color: #F1F5F9;
+  color: #334155;
+  font-weight: 700;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid #CBD5E1;
+  border-right: 1px solid #CBD5E1;
+  white-space: nowrap;
+}
+
+.table-grid th:last-child {
+  border-right: none;
+}
+
+.table-grid td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #E2E8F0;
+  border-right: 1px solid #E2E8F0;
+  color: #1E293B;
+  vertical-align: middle;
+}
+
+.table-grid td:last-child {
+  border-right: none;
+}
+
+.table-grid tbody tr:nth-child(even) {
+  background-color: #F8FAFC;
+}
+
+.table-grid tbody tr:hover {
+  background-color: #F1F5F9;
+}
+
+.table-grid tfoot td {
+  background-color: #F1F5F9;
+  color: #0F172A;
+  font-weight: 700;
+  border-top: 2px solid #CBD5E1;
+  border-right: 1px solid #CBD5E1;
+  border-bottom: none;
+}
+
+.table-grid tfoot td:last-child {
+  border-right: none;
+}

@@ -235,34 +235,33 @@ const ShopManagement = () => {
               </div>
 
               {/* Desktop Table (>= md) */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs text-slate-700">
+              <div className="hidden md:block table-grid-wrapper">
+                <table className="table-grid">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold tracking-wider">
-                      <th className="py-3.5 px-4">Shop Code</th>
-                      <th className="py-3.5 px-4">Configured Shop Name</th>
-                      <th className="py-3.5 px-4">Physical Address / Location</th>
-                      <th className="py-3.5 px-4 text-center">Status</th>
-                      <th className="py-3.5 px-4">Created At</th>
-                      <th className="py-3.5 px-4">Last Modified</th>
-                      <th className="py-3.5 px-4 text-right">Actions</th>
+                    <tr>
+                      <th className="w-28 text-center">Shop Code</th>
+                      <th>Configured Shop Name</th>
+                      <th>Physical Address / Location</th>
+                      <th className="w-28 text-center">Status</th>
+                      <th className="w-32">Created At</th>
+                      <th className="w-36">Last Modified</th>
+                      <th className="w-24 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 font-mono">
+                  <tbody className="font-mono text-xs">
                     {shopsList.map((shop) => {
                       const isCurrent = selectedShop?.id === shop.id;
                       return (
                         <tr 
                           key={shop.id}
-                          className={`hover:bg-slate-50/80 transition-colors ${isCurrent ? 'bg-slate-50/80' : ''}`}
                           style={isCurrent ? { backgroundColor: activeTheme.light } : {}}
                         >
-                          <td className="py-3.5 px-4">
+                          <td className="text-center">
                             <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-bold bg-white text-slate-800 border border-slate-300">
                               {shop.code}
                             </span>
                           </td>
-                          <td className="py-3.5 px-4 font-sans font-bold text-slate-900 text-sm">
+                          <td className="font-sans font-bold text-slate-900 text-sm">
                             <div className="flex items-center gap-2">
                               <span>{shop.name}</span>
                               {isCurrent && (
@@ -275,7 +274,7 @@ const ShopManagement = () => {
                               )}
                             </div>
                           </td>
-                          <td className="py-3.5 px-4 font-sans text-slate-600 max-w-xs truncate">
+                          <td className="font-sans text-slate-600 max-w-xs truncate">
                             {shop.address ? (
                               <span className="flex items-center gap-1.5">
                                 <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -285,7 +284,7 @@ const ShopManagement = () => {
                               <span className="text-slate-400 italic">No address provided</span>
                             )}
                           </td>
-                          <td className="py-3.5 px-4 text-center font-sans">
+                          <td className="text-center font-sans">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                               shop.isActive
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
@@ -294,13 +293,13 @@ const ShopManagement = () => {
                               {shop.isActive ? 'ACTIVE' : 'INACTIVE'}
                             </span>
                           </td>
-                          <td className="py-3.5 px-4 text-slate-500 font-sans text-[11px]">
+                          <td className="text-slate-500 font-sans text-[11px]">
                             {new Date(shop.createdAt).toLocaleDateString()}
                           </td>
-                          <td className="py-3.5 px-4 text-slate-600 font-sans text-[11px]">
+                          <td className="text-slate-600 font-sans text-[11px]">
                             {new Date(shop.updatedAt).toLocaleString()}
                           </td>
-                          <td className="py-3.5 px-4 text-right font-sans">
+                          <td className="text-right font-sans">
                             {isAdmin ? (
                               <button
                                 onClick={() => handleOpenEdit(shop)}

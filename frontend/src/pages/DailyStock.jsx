@@ -885,153 +885,151 @@ const DailyStock = () => {
             </div>
 
             {/* 2. Desktop Tabular View (Visible on tablet/desktop or when forced) */}
-            <div className={`bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs ${
+            <div className={`table-grid-wrapper ${
               viewMode === 'cards' ? 'hidden' : viewMode === 'table' ? 'block' : 'hidden md:block'
             }`}>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-700 min-w-[840px]">
-                  <thead className="bg-slate-50 text-slate-600 uppercase text-[11px] font-bold border-b border-slate-200 sticky top-0 z-10">
-                    <tr>
-                      <th className="px-3.5 py-3 text-center">S.No.</th>
-                      <th className="px-4 py-3">Brand Name</th>
-                      <th className="px-3 py-3 text-center">Size</th>
-                      <th className="px-3 py-3 text-center">Opening</th>
-                      <th className="px-3 py-3 text-center">Indent</th>
-                      <th className="px-3 py-3 text-center">Total</th>
-                      <th className="px-3 py-3 text-center">Closing</th>
-                      <th className="px-3 py-3 text-center" style={{ color: activeTheme.primary }}>Sale</th>
-                      <th className="px-3.5 py-3 text-right">Rate</th>
-                      <th className="px-3.5 py-3 text-right text-slate-700">Stock Value (₹)</th>
-                      <th className="px-4 py-3 text-right text-emerald-600">Amount (₹)</th>
-                      <th className="px-3 py-3 text-right text-slate-500" title="Informational only; excluded from financial totals">
-                        Extra Amt*
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-mono">
-                    {items.map((row, idx) => {
-                      const isInitialRow = meta.isInitialSetup || row.isInitialOpening;
-                      const isPendingClosing = row.closingStock === '' || row.closingStock === null || row.closingStock === undefined;
+              <table className="table-grid min-w-[840px]">
+                <thead className="sticky top-0 z-10">
+                  <tr>
+                    <th className="text-center w-12">S.No.</th>
+                    <th>Brand Name</th>
+                    <th className="text-center w-16">Size</th>
+                    <th className="text-center w-20">Opening</th>
+                    <th className="text-center w-20">Indent</th>
+                    <th className="text-center w-20">Total</th>
+                    <th className="text-center w-24">Closing</th>
+                    <th className="text-center w-20" style={{ color: activeTheme.primary }}>Sale</th>
+                    <th className="text-right w-24">Rate</th>
+                    <th className="text-right w-28 text-slate-700">Stock Value (₹)</th>
+                    <th className="text-right w-28 text-emerald-700">Amount (₹)</th>
+                    <th className="text-right w-24 text-slate-500" title="Informational only; excluded from financial totals">
+                      Extra Amt*
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="font-mono text-xs">
+                  {items.map((row, idx) => {
+                    const isInitialRow = meta.isInitialSetup || row.isInitialOpening;
+                    const isPendingClosing = row.closingStock === '' || row.closingStock === null || row.closingStock === undefined;
 
-                      return (
-                        <tr key={row.id || idx} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="px-3.5 py-3 text-center font-bold text-slate-500">
-                            {row.brand?.serialNo || idx + 1}
-                          </td>
-                          <td className="px-4 py-3 font-sans font-bold text-slate-900">
-                            <div className="flex items-center gap-1.5">
-                              <span>{row.brand?.name}</span>
-                              {isPendingClosing && !meta.isLocked && (
-                                <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-300 px-1.5 py-0.2 rounded font-sans font-semibold">
-                                  Pending
-                                </span>
-                              )}
+                    return (
+                      <tr key={row.id || idx}>
+                        <td className="text-center font-bold text-slate-500">
+                          {row.brand?.serialNo || idx + 1}
+                        </td>
+                        <td className="font-sans font-bold text-slate-900">
+                          <div className="flex items-center gap-1.5">
+                            <span>{row.brand?.name}</span>
+                            {isPendingClosing && !meta.isLocked && (
+                              <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-300 px-1.5 py-0.2 rounded font-sans font-semibold">
+                                Pending
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="text-center font-bold" style={{ color: activeTheme.primary }}>
+                          {row.size?.code}
+                        </td>
+                        <td className="text-center text-slate-700">
+                          {isInitialRow && !meta.isLocked ? (
+                            <input
+                              type="number"
+                              min="0"
+                              value={row.openingStock}
+                              onChange={(e) => handleOpeningChange(idx, e.target.value)}
+                              placeholder="0"
+                              className="w-16 bg-white border border-indigo-300 rounded-lg py-1 px-1.5 text-center text-indigo-700 focus:outline-none focus:ring-1 focus:ring-indigo-400 font-bold"
+                              title="Enter initial opening balance"
+                            />
+                          ) : (
+                            <span>{row.openingStock}</span>
+                          )}
+                        </td>
+                        <td className="text-center">
+                          <input
+                            type="number"
+                            min="0"
+                            value={row.indentStock}
+                            onChange={(e) => handleIndentChange(idx, e.target.value)}
+                            disabled={meta.isLocked}
+                            className="w-16 bg-white border border-slate-300 rounded-lg py-1 px-1.5 text-center text-slate-900 focus:outline-none focus-theme font-bold disabled:opacity-50"
+                          />
+                        </td>
+                        <td className="text-center font-bold text-slate-900">
+                          {row.totalStock}
+                        </td>
+                        <td className="text-center">
+                          <input
+                            type="number"
+                            min="0"
+                            value={row.closingStock}
+                            onChange={(e) => handleClosingChange(idx, e.target.value)}
+                            disabled={meta.isLocked}
+                            placeholder="Count"
+                            className={`w-16 bg-white border rounded-lg py-1 px-1.5 text-center font-bold focus:outline-none disabled:opacity-50 ${
+                              row.closingError
+                                ? 'border-rose-400 text-rose-600 bg-rose-50/40 focus:border-rose-500'
+                                : 'border-slate-300 text-slate-900 focus-theme'
+                            }`}
+                          />
+                          {row.closingError && (
+                            <div className="text-[9px] text-rose-600 font-sans mt-0.5 whitespace-nowrap">
+                              {row.closingError}
                             </div>
-                          </td>
-                          <td className="px-3 py-3 text-center font-bold" style={{ color: activeTheme.primary }}>
-                            {row.size?.code}
-                          </td>
-                          <td className="px-3 py-2 text-center text-slate-700">
-                            {isInitialRow && !meta.isLocked ? (
-                              <input
-                                type="number"
-                                min="0"
-                                value={row.openingStock}
-                                onChange={(e) => handleOpeningChange(idx, e.target.value)}
-                                placeholder="0"
-                                className="w-16 bg-white border border-indigo-300 rounded-lg py-1 px-1.5 text-center text-indigo-700 focus:outline-none focus:ring-1 focus:ring-indigo-400 font-bold"
-                                title="Enter initial opening balance"
-                              />
-                            ) : (
-                              <span>{row.openingStock}</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <input
-                              type="number"
-                              min="0"
-                              value={row.indentStock}
-                              onChange={(e) => handleIndentChange(idx, e.target.value)}
-                              disabled={meta.isLocked}
-                              className="w-16 bg-white border border-slate-300 rounded-lg py-1 px-1.5 text-center text-slate-900 focus:outline-none focus-theme font-bold disabled:opacity-50"
-                            />
-                          </td>
-                          <td className="px-3 py-3 text-center font-bold text-slate-900">
-                            {row.totalStock}
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <input
-                              type="number"
-                              min="0"
-                              value={row.closingStock}
-                              onChange={(e) => handleClosingChange(idx, e.target.value)}
-                              disabled={meta.isLocked}
-                              placeholder="Count"
-                              className={`w-16 bg-white border rounded-lg py-1 px-1.5 text-center font-bold focus:outline-none disabled:opacity-50 ${
-                                row.closingError
-                                  ? 'border-rose-400 text-rose-600 bg-rose-50/40 focus:border-rose-500'
-                                  : 'border-slate-300 text-slate-900 focus-theme'
-                              }`}
-                            />
-                            {row.closingError && (
-                              <div className="text-[9px] text-rose-600 font-sans mt-0.5 whitespace-nowrap">
-                                {row.closingError}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-3 py-3 text-center font-bold" style={{ color: activeTheme.primary }}>
-                            {isPendingClosing ? '—' : row.saleCount}
-                          </td>
-                          <td className="px-3.5 py-3 text-right text-slate-600">
-                            ₹{row.bottleRate}
-                          </td>
-                          <td className="px-3.5 py-3 text-right font-bold text-slate-800 font-sans">
-                            ₹{((parseInt(row.totalStock, 10) || 0) * (parseFloat(row.bottleRate) || 0)).toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-right font-bold text-emerald-600 font-sans">
-                            ₹{parseFloat(row.saleAmount || 0).toFixed(2)}
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={row.extraAmount}
-                              onChange={(e) => handleExtraAmountChange(idx, e.target.value)}
-                              disabled={meta.isLocked}
-                              placeholder="0.00"
-                              className="w-20 bg-white border border-slate-300 rounded-lg py-1 px-1.5 text-right text-slate-600 focus:outline-none focus-theme text-xs disabled:opacity-50"
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  {/* Table Footer Totals */}
-                  <tfoot className="bg-slate-50 text-slate-800 font-bold border-t-2 border-slate-200 font-mono">
-                    <tr>
-                      <td colSpan={3} className="px-4 py-3 font-sans text-xs uppercase font-bold" style={{ color: activeTheme.primary }}>
-                        Daily Totals:
-                      </td>
-                      <td className="px-3 py-3 text-center text-slate-700">{totalOpening}</td>
-                      <td className="px-3 py-3 text-center text-indigo-700">{totalIndent}</td>
-                      <td className="px-3 py-3 text-center text-slate-900">{totalStockCount}</td>
-                      <td className="px-3 py-3 text-center text-emerald-600">{totalClosing}</td>
-                      <td className="px-3 py-3 text-center text-sm font-extrabold" style={{ color: activeTheme.primary }}>{totalSaleBottles}</td>
-                      <td className="px-3.5 py-3 text-right text-slate-500">—</td>
-                      <td className="px-3.5 py-3 text-right text-slate-800 text-sm font-extrabold font-sans">
-                        ₹{totalStockValue.toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3 text-right text-emerald-600 text-sm font-extrabold font-sans">
-                        ₹{totalBusinessAmount.toFixed(2)}
-                      </td>
-                      <td className="px-3 py-3 text-right text-slate-500 text-xs font-sans">
-                        ₹{totalExtraAmount.toFixed(2)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+                          )}
+                        </td>
+                        <td className="text-center font-bold" style={{ color: activeTheme.primary }}>
+                          {isPendingClosing ? '—' : row.saleCount}
+                        </td>
+                        <td className="text-right text-slate-600">
+                          ₹{row.bottleRate}
+                        </td>
+                        <td className="text-right font-bold text-slate-800 font-sans">
+                          ₹{((parseInt(row.totalStock, 10) || 0) * (parseFloat(row.bottleRate) || 0)).toFixed(2)}
+                        </td>
+                        <td className="text-right font-bold text-emerald-700 font-sans">
+                          ₹{parseFloat(row.saleAmount || 0).toFixed(2)}
+                        </td>
+                        <td className="text-right">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.extraAmount}
+                            onChange={(e) => handleExtraAmountChange(idx, e.target.value)}
+                            disabled={meta.isLocked}
+                            placeholder="0.00"
+                            className="w-20 bg-white border border-slate-300 rounded-lg py-1 px-1.5 text-right text-slate-600 focus:outline-none focus-theme text-xs disabled:opacity-50"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                {/* Table Footer Totals */}
+                <tfoot className="font-mono text-xs">
+                  <tr>
+                    <td colSpan={3} className="font-sans uppercase font-bold" style={{ color: activeTheme.primary }}>
+                      Daily Totals:
+                    </td>
+                    <td className="text-center text-slate-700">{totalOpening}</td>
+                    <td className="text-center text-indigo-700">{totalIndent}</td>
+                    <td className="text-center text-slate-900">{totalStockCount}</td>
+                    <td className="text-center text-emerald-600">{totalClosing}</td>
+                    <td className="text-center text-sm font-extrabold" style={{ color: activeTheme.primary }}>{totalSaleBottles}</td>
+                    <td className="text-right text-slate-400">—</td>
+                    <td className="text-right text-slate-900 font-extrabold font-sans">
+                      ₹{totalStockValue.toFixed(2)}
+                    </td>
+                    <td className="text-right text-emerald-700 font-extrabold font-sans">
+                      ₹{totalBusinessAmount.toFixed(2)}
+                    </td>
+                    <td className="text-right text-slate-500 text-xs font-sans">
+                      ₹{totalExtraAmount.toFixed(2)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </>
         )}

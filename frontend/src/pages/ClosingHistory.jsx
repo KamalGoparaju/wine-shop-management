@@ -475,69 +475,69 @@ const ClosingHistory = () => {
               </div>
 
               {/* Desktop Full Table (>= lg) */}
-              <div className="hidden lg:block overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-700 font-mono">
-                  <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] font-bold border-b border-slate-200 whitespace-nowrap">
+              <div className="hidden lg:block table-grid-wrapper">
+                <table className="table-grid font-mono">
+                  <thead>
                     <tr>
-                      <th className="px-3.5 py-3">Date</th>
-                      <th className="px-2.5 py-3 text-center" style={{ color: activeTheme.primary }}>Sold</th>
-                      <th className="px-2.5 py-3 text-center">Rem.</th>
-                      <th className="px-3 py-3 text-right">Total Business</th>
-                      <th className="px-3 py-3 text-right text-rose-600">Expenses</th>
-                      <th className="px-3 py-3 text-right text-indigo-600">Online</th>
-                      <th className="px-3 py-3 text-right text-teal-600">Cash</th>
-                      <th className="px-3.5 py-3 text-right font-bold text-slate-800">Total Coll.</th>
-                      <th className="px-3.5 py-3 text-right font-bold text-emerald-600">Final Amt</th>
-                      <th className="px-3 py-3 text-right">Diff</th>
-                      <th className="px-3 py-3 text-right text-slate-500">Extra Amt*</th>
-                      <th className="px-3 py-3 text-center font-sans">Status</th>
-                      <th className="px-3 py-3 font-sans">Closed By</th>
-                      <th className="px-3.5 py-3 text-right font-sans">Actions</th>
+                      <th className="w-24">Date</th>
+                      <th className="w-16 text-center" style={{ color: activeTheme.primary }}>Sold</th>
+                      <th className="w-16 text-center">Rem.</th>
+                      <th className="text-right">Total Business</th>
+                      <th className="text-right text-rose-600">Expenses</th>
+                      <th className="text-right text-indigo-600">Online</th>
+                      <th className="text-right text-teal-600">Cash</th>
+                      <th className="text-right font-bold text-slate-800">Total Coll.</th>
+                      <th className="text-right font-bold text-emerald-700">Final Amt</th>
+                      <th className="text-right">Diff</th>
+                      <th className="text-right text-slate-500">Extra Amt*</th>
+                      <th className="text-center font-sans w-24">Status</th>
+                      <th className="font-sans w-28">Closed By</th>
+                      <th className="text-right font-sans w-28">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="text-xs">
                     {history.map((r) => {
                       const diff = parseFloat(r.collectionDifference);
                       const isReopened = r.status === 'REOPENED';
 
                       return (
-                        <tr key={r.id} className="hover:bg-slate-50/80 transition-colors whitespace-nowrap">
-                          <td className="px-3.5 py-3.5 font-bold text-slate-900">
+                        <tr key={r.id}>
+                          <td className="font-bold text-slate-900">
                             {new Date(r.businessDate).toISOString().slice(0, 10)}
                           </td>
-                          <td className="px-2.5 py-3.5 text-center font-bold" style={{ color: activeTheme.primary }}>
+                          <td className="text-center font-bold" style={{ color: activeTheme.primary }}>
                             {r.totalBottlesSold}
                           </td>
-                          <td className="px-2.5 py-3.5 text-center text-slate-500">
+                          <td className="text-center text-slate-600">
                             {r.totalBottlesRemaining}
                           </td>
-                          <td className="px-3 py-3.5 text-right font-bold text-slate-900">
+                          <td className="text-right font-bold text-slate-900">
                             ₹{parseFloat(r.totalBusiness).toFixed(2)}
                           </td>
-                          <td className="px-3 py-3.5 text-right text-rose-600">
+                          <td className="text-right text-rose-600">
                             ₹{parseFloat(r.totalExpenses).toFixed(2)}
                           </td>
-                          <td className="px-3 py-3.5 text-right text-indigo-600">
+                          <td className="text-right text-indigo-600">
                             ₹{parseFloat(r.onlineCollection).toFixed(2)}
                           </td>
-                          <td className="px-3 py-3.5 text-right text-teal-600">
+                          <td className="text-right text-teal-700">
                             ₹{parseFloat(r.offlineCollection).toFixed(2)}
                           </td>
-                          <td className="px-3.5 py-3.5 text-right font-bold text-slate-800">
+                          <td className="text-right font-bold text-slate-800">
                             ₹{parseFloat(r.totalCollected).toFixed(2)}
                           </td>
-                          <td className="px-3.5 py-3.5 text-right font-bold text-emerald-600">
+                          <td className="text-right font-bold text-emerald-700">
                             ₹{parseFloat(r.finalAmount).toFixed(2)}
                           </td>
-                          <td className={`px-3 py-3.5 text-right font-bold ${
-                            diff === 0 ? 'text-slate-500' : diff > 0 ? 'text-emerald-600' : 'text-rose-600'
+                          <td className={`text-right font-bold ${
+                            diff === 0 ? 'text-slate-500' : diff > 0 ? 'text-emerald-700' : 'text-rose-600'
                           }`}>
                             {diff > 0 ? `+₹${diff.toFixed(2)}` : `₹${diff.toFixed(2)}`}
                           </td>
-                          <td className="px-3 py-3.5 text-right text-slate-400">
+                          <td className="text-right text-slate-500">
                             ₹{parseFloat(r.extraAmountInformational || 0).toFixed(2)}
                           </td>
-                          <td className="px-3 py-3.5 text-center font-sans">
+                          <td className="text-center font-sans">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                               isReopened
                                 ? 'bg-amber-50 text-amber-700 border-amber-300'
@@ -546,15 +546,15 @@ const ClosingHistory = () => {
                               {r.status}
                             </span>
                           </td>
-                          <td className="px-3 py-3.5 font-sans text-slate-500 truncate max-w-[120px]">
+                          <td className="font-sans text-slate-600 truncate max-w-[120px]">
                             {r.closedBy || 'Admin'}
                           </td>
-                          <td className="px-3.5 py-3.5 text-right font-sans whitespace-nowrap">
+                          <td className="text-right font-sans whitespace-nowrap">
                             <div className="inline-flex items-center gap-1.5">
                               <button
                                 onClick={() => handleExportPdf(r)}
                                 disabled={exportingPdfId === (r.id || r.businessDate)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-rose-700 text-xs rounded-lg transition-colors border border-slate-200 font-medium disabled:opacity-50"
+                                className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-rose-700 text-xs rounded-lg transition-colors border border-slate-200 font-medium disabled:opacity-50"
                                 title="Download Daily Closing PDF"
                               >
                                 <FileText className={`w-3.5 h-3.5 ${exportingPdfId === (r.id || r.businessDate) ? 'animate-bounce' : ''}`} />
@@ -562,7 +562,7 @@ const ClosingHistory = () => {
                               </button>
                               <button
                                 onClick={() => handleOpenDetails(r)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs rounded-lg transition-colors border border-slate-200 font-medium"
+                                className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs rounded-lg transition-colors border border-slate-200 font-medium"
                               >
                                 <Eye className="w-3.5 h-3.5" style={{ color: activeTheme.primary }} />
                                 <span>View</span>
@@ -823,45 +823,45 @@ const ClosingHistory = () => {
                   {detailStock.length === 0 ? (
                     <p className="text-slate-500 italic text-center py-8">No daily stock records found for this date.</p>
                   ) : (
-                    <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                      <table className="w-full text-left text-xs text-slate-700 font-mono min-w-[700px]">
-                        <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] font-bold border-b border-slate-200">
+                    <div className="table-grid-wrapper">
+                      <table className="table-grid font-mono min-w-[700px]">
+                        <thead>
                           <tr>
-                            <th className="px-3 py-2.5 text-center">S.No.</th>
-                            <th className="px-3.5 py-2.5">Brand</th>
-                            <th className="px-2.5 py-2.5 text-center" style={{ color: activeTheme.primary }}>Size</th>
-                            <th className="px-2.5 py-2.5 text-center">Opening</th>
-                            <th className="px-2.5 py-2.5 text-center">Indent</th>
-                            <th className="px-2.5 py-2.5 text-center">Total</th>
-                            <th className="px-2.5 py-2.5 text-center">Closing</th>
-                            <th className="px-2.5 py-2.5 text-center" style={{ color: activeTheme.primary }}>Sale</th>
-                            <th className="px-3 py-2.5 text-right">Rate</th>
-                            <th className="px-3.5 py-2.5 text-right text-emerald-600">Amount (₹)</th>
-                            <th className="px-3 py-2.5 text-right text-slate-400">Extra Amt*</th>
+                            <th className="w-12 text-center">S.No.</th>
+                            <th>Brand</th>
+                            <th className="w-16 text-center" style={{ color: activeTheme.primary }}>Size</th>
+                            <th className="w-16 text-center">Opening</th>
+                            <th className="w-16 text-center">Indent</th>
+                            <th className="w-16 text-center">Total</th>
+                            <th className="w-16 text-center">Closing</th>
+                            <th className="w-16 text-center" style={{ color: activeTheme.primary }}>Sale</th>
+                            <th className="w-20 text-right">Rate</th>
+                            <th className="w-24 text-right text-emerald-700">Amount (₹)</th>
+                            <th className="w-20 text-right text-slate-400">Extra Amt*</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="text-xs">
                           {detailStock.map((row, idx) => (
-                            <tr key={row.id || idx} className="hover:bg-slate-50/80">
-                              <td className="px-3 py-2.5 text-center text-slate-500 font-bold">
+                            <tr key={row.id || idx}>
+                              <td className="text-center text-slate-500 font-bold">
                                 {row.brand?.serialNo || idx + 1}
                               </td>
-                              <td className="px-3.5 py-2.5 font-sans font-bold text-slate-900">
+                              <td className="font-sans font-bold text-slate-900">
                                 {row.brand?.name}
                               </td>
-                              <td className="px-2.5 py-2.5 text-center font-bold" style={{ color: activeTheme.primary }}>
+                              <td className="text-center font-bold" style={{ color: activeTheme.primary }}>
                                 {row.size?.code}
                               </td>
-                              <td className="px-2.5 py-2.5 text-center">{row.openingStock}</td>
-                              <td className="px-2.5 py-2.5 text-center text-indigo-600">{row.indentStock}</td>
-                              <td className="px-2.5 py-2.5 text-center font-bold text-slate-900">{row.totalStock}</td>
-                              <td className="px-2.5 py-2.5 text-center text-emerald-600 font-bold">{row.closingStock}</td>
-                              <td className="px-2.5 py-2.5 text-center font-bold" style={{ color: activeTheme.primary }}>{row.saleCount}</td>
-                              <td className="px-3 py-2.5 text-right text-slate-600">₹{row.bottleRate}</td>
-                              <td className="px-3.5 py-2.5 text-right font-bold text-emerald-600 font-sans">
+                              <td className="text-center text-slate-600">{row.openingStock}</td>
+                              <td className="text-center text-indigo-600 font-bold">{row.indentStock}</td>
+                              <td className="text-center font-bold text-slate-900">{row.totalStock}</td>
+                              <td className="text-center text-emerald-700 font-bold">{row.closingStock}</td>
+                              <td className="text-center font-bold" style={{ color: activeTheme.primary }}>{row.saleCount}</td>
+                              <td className="text-right text-slate-600">₹{row.bottleRate}</td>
+                              <td className="text-right font-bold text-emerald-700 font-sans">
                                 ₹{parseFloat(row.saleAmount || 0).toFixed(2)}
                               </td>
-                              <td className="px-3 py-2.5 text-right text-slate-400">
+                              <td className="text-right text-slate-400">
                                 ₹{parseFloat(row.extraAmount || 0).toFixed(2)}
                               </td>
                             </tr>
