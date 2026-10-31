@@ -80,7 +80,6 @@ const ClosingHistory = () => {
 
     if (!currentShopId) return;
 
-    // Reset table state immediately on shop switch
     setHistory([]);
     setSelectedRecord(null);
     setLoading(true);
@@ -289,98 +288,100 @@ const ClosingHistory = () => {
 
   return (
     <Layout title="Daily Business Closing History">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header & Controls */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4 bg-slate-900/60 p-3.5 sm:p-5 rounded-2xl border border-slate-800">
           <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-              <History className="w-6 h-6 text-amber-500" />
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+              <History className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 shrink-0" />
               Daily Business History & Reports
             </h1>
-            <p className="text-sm text-slate-400">
+            <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
               Active Shop: <strong className="text-amber-400">{selectedShop?.name}</strong> ({selectedShop?.code})
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Quick Presets */}
-            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 text-xs">
+            <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1 text-xs overflow-x-auto max-w-full">
               <button
                 onClick={setFilterToday}
-                className="px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-300 font-medium transition-colors"
+                className="px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-300 font-medium transition-colors shrink-0"
               >
                 Today
               </button>
               <button
                 onClick={setFilterYesterday}
-                className="px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-300 font-medium transition-colors"
+                className="px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-300 font-medium transition-colors shrink-0"
               >
                 Yesterday
               </button>
               <button
                 onClick={setFilterThisMonth}
-                className="px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-300 font-medium transition-colors"
+                className="px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-300 font-medium transition-colors shrink-0"
               >
                 This Month
               </button>
               <button
                 onClick={clearFilters}
-                className="px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white font-medium transition-colors border-l border-slate-800"
+                className="px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white font-medium transition-colors border-l border-slate-800 shrink-0"
               >
                 Clear
               </button>
             </div>
 
             {/* Date Pickers */}
-            <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300">
-              <Calendar className="w-4 h-4 text-amber-500" />
+            <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-300">
+              <Calendar className="w-3.5 h-3.5 text-amber-500 shrink-0" />
               <input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="bg-transparent text-white font-mono focus:outline-none cursor-pointer"
+                className="bg-transparent text-white font-mono text-xs focus:outline-none cursor-pointer"
+                aria-label="From date"
               />
-              <span className="text-slate-500">to</span>
+              <span className="text-slate-500 text-[11px]">to</span>
               <input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="bg-transparent text-white font-mono focus:outline-none cursor-pointer"
+                className="bg-transparent text-white font-mono text-xs focus:outline-none cursor-pointer"
+                aria-label="To date"
               />
             </div>
 
             <button
               onClick={fetchHistory}
-              className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
+              className="p-2 sm:p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
               title="Refresh History"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
             <button
               onClick={handleExportCSV}
               disabled={exportingCsv || loading || history.length === 0}
-              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold text-xs rounded-xl shadow-md transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold text-xs rounded-xl shadow-md transition-all disabled:opacity-50"
             >
-              <Download className={`w-4 h-4 ${exportingCsv ? 'animate-bounce' : ''}`} />
-              {exportingCsv ? 'Exporting...' : 'Export CSV'}
+              <Download className={`w-3.5 h-3.5 ${exportingCsv ? 'animate-bounce' : ''}`} />
+              <span className="hidden xs:inline">Export CSV</span>
             </button>
 
             <button
               onClick={handleExportExcel}
               disabled={exportingExcel || loading || history.length === 0}
-              className="flex items-center gap-2 px-4 py-2.5 bg-teal-700 hover:bg-teal-600 text-white font-semibold text-xs rounded-xl shadow-md transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 bg-teal-700 hover:bg-teal-600 text-white font-semibold text-xs rounded-xl shadow-md transition-all disabled:opacity-50"
             >
-              <FileSpreadsheet className={`w-4 h-4 ${exportingExcel ? 'animate-bounce' : ''}`} />
-              {exportingExcel ? 'Exporting...' : 'Export Excel'}
+              <FileSpreadsheet className={`w-3.5 h-3.5 ${exportingExcel ? 'animate-bounce' : ''}`} />
+              <span className="hidden xs:inline">Export Excel</span>
             </button>
           </div>
         </div>
 
-        {/* History Table */}
+        {/* History Records Container */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
-            <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+          <div className="p-3.5 sm:p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
+            <h2 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <History className="w-4 h-4 text-amber-500" />
               Saved Daily Closings ({history.length})
             </h2>
@@ -392,150 +393,226 @@ const ClosingHistory = () => {
           {loading ? (
             <div className="p-12 text-center text-slate-500 text-xs">Loading closing history...</div>
           ) : history.length === 0 ? (
-            <div className="p-12 text-center text-slate-500 text-xs">
+            <div className="p-12 text-center text-slate-400 text-xs">
               No daily closing records found for the selected date range.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300 font-mono">
-                <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-800 whitespace-nowrap">
-                  <tr>
-                    <th className="px-3.5 py-3">Date</th>
-                    <th className="px-2.5 py-3 text-center">Sold</th>
-                    <th className="px-2.5 py-3 text-center">Rem.</th>
-                    <th className="px-3 py-3 text-right">Total Business</th>
-                    <th className="px-3 py-3 text-right text-rose-400">Expenses</th>
-                    <th className="px-3 py-3 text-right">Online</th>
-                    <th className="px-3 py-3 text-right">Cash</th>
-                    <th className="px-3.5 py-3 text-right font-bold text-amber-400">Total Coll.</th>
-                    <th className="px-3.5 py-3 text-right font-bold text-emerald-400">Final Amt</th>
-                    <th className="px-3 py-3 text-right">Diff</th>
-                    <th className="px-3 py-3 text-right text-slate-400">Extra Amt*</th>
-                    <th className="px-3 py-3 text-center font-sans">Status</th>
-                    <th className="px-3 py-3 font-sans">Closed By</th>
-                    <th className="px-3.5 py-3 text-right font-sans">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {history.map((r) => {
-                    const diff = parseFloat(r.collectionDifference);
-                    const isReopened = r.status === 'REOPENED';
+            <>
+              {/* Mobile History Cards (< lg) */}
+              <div className="lg:hidden p-3 space-y-3">
+                {history.map((r) => {
+                  const diff = parseFloat(r.collectionDifference);
+                  const isReopened = r.status === 'REOPENED';
+                  const dateStr = new Date(r.businessDate).toISOString().slice(0, 10);
 
-                    return (
-                      <tr key={r.id} className="hover:bg-slate-800/40 transition-colors whitespace-nowrap">
-                        <td className="px-3.5 py-3.5 font-bold text-white">
-                          {new Date(r.businessDate).toISOString().slice(0, 10)}
-                        </td>
-                        <td className="px-2.5 py-3.5 text-center font-bold text-amber-400">
-                          {r.totalBottlesSold}
-                        </td>
-                        <td className="px-2.5 py-3.5 text-center text-slate-400">
-                          {r.totalBottlesRemaining}
-                        </td>
-                        <td className="px-3 py-3.5 text-right font-bold text-white">
-                          ₹{parseFloat(r.totalBusiness).toFixed(2)}
-                        </td>
-                        <td className="px-3 py-3.5 text-right text-rose-400">
-                          ₹{parseFloat(r.totalExpenses).toFixed(2)}
-                        </td>
-                        <td className="px-3 py-3.5 text-right text-indigo-400">
-                          ₹{parseFloat(r.onlineCollection).toFixed(2)}
-                        </td>
-                        <td className="px-3 py-3.5 text-right text-teal-400">
-                          ₹{parseFloat(r.offlineCollection).toFixed(2)}
-                        </td>
-                        <td className="px-3.5 py-3.5 text-right font-bold text-amber-400">
-                          ₹{parseFloat(r.totalCollected).toFixed(2)}
-                        </td>
-                        <td className="px-3.5 py-3.5 text-right font-bold text-emerald-400">
-                          ₹{parseFloat(r.finalAmount).toFixed(2)}
-                        </td>
-                        <td className={`px-3 py-3.5 text-right font-bold ${
+                  return (
+                    <div key={r.id} className="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 space-y-3">
+                      <div className="flex items-start justify-between gap-2 border-b border-slate-800/80 pb-2">
+                        <div>
+                          <span className="text-sm font-bold text-white font-mono">{dateStr}</span>
+                          <span className="block text-[11px] text-slate-400 mt-0.5">Closed by: {r.closedBy || 'Admin'}</span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          isReopened
+                            ? 'bg-amber-950 text-amber-400 border-amber-800'
+                            : 'bg-emerald-950 text-emerald-400 border-emerald-800'
+                        }`}>
+                          {r.status}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                        <div>
+                          <span className="text-[10px] uppercase text-slate-500 font-sans block">Total Business</span>
+                          <span className="font-bold text-white">₹{parseFloat(r.totalBusiness).toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase text-slate-500 font-sans block">Total Expenses</span>
+                          <span className="font-bold text-rose-400">₹{parseFloat(r.totalExpenses).toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase text-slate-500 font-sans block">Total Collected</span>
+                          <span className="font-bold text-amber-400">₹{parseFloat(r.totalCollected).toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase text-slate-500 font-sans block">Final Net Amount</span>
+                          <span className="font-extrabold text-emerald-400">₹{parseFloat(r.finalAmount).toFixed(2)}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs">
+                        <span className={`font-mono text-xs font-bold ${
                           diff === 0 ? 'text-slate-400' : diff > 0 ? 'text-emerald-400' : 'text-rose-400'
                         }`}>
-                          {diff > 0 ? `+₹${diff.toFixed(2)}` : `₹${diff.toFixed(2)}`}
-                        </td>
-                        <td className="px-3 py-3.5 text-right text-slate-500">
-                          ₹{parseFloat(r.extraAmountInformational || 0).toFixed(2)}
-                        </td>
-                        <td className="px-3 py-3.5 text-center font-sans">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                            isReopened
-                              ? 'bg-amber-950 text-amber-400 border-amber-800'
-                              : 'bg-emerald-950 text-emerald-400 border-emerald-800'
+                          Diff: {diff > 0 ? `+₹${diff.toFixed(2)}` : `₹${diff.toFixed(2)}`}
+                        </span>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleExportPdf(r)}
+                            disabled={exportingPdfId === (r.id || r.businessDate)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 text-rose-300 text-xs rounded-lg transition-colors border border-slate-700 font-medium disabled:opacity-50"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>PDF</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenDetails(r)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>View</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Full Table (>= lg) */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300 font-mono">
+                  <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-800 whitespace-nowrap">
+                    <tr>
+                      <th className="px-3.5 py-3">Date</th>
+                      <th className="px-2.5 py-3 text-center">Sold</th>
+                      <th className="px-2.5 py-3 text-center">Rem.</th>
+                      <th className="px-3 py-3 text-right">Total Business</th>
+                      <th className="px-3 py-3 text-right text-rose-400">Expenses</th>
+                      <th className="px-3 py-3 text-right">Online</th>
+                      <th className="px-3 py-3 text-right">Cash</th>
+                      <th className="px-3.5 py-3 text-right font-bold text-amber-400">Total Coll.</th>
+                      <th className="px-3.5 py-3 text-right font-bold text-emerald-400">Final Amt</th>
+                      <th className="px-3 py-3 text-right">Diff</th>
+                      <th className="px-3 py-3 text-right text-slate-400">Extra Amt*</th>
+                      <th className="px-3 py-3 text-center font-sans">Status</th>
+                      <th className="px-3 py-3 font-sans">Closed By</th>
+                      <th className="px-3.5 py-3 text-right font-sans">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {history.map((r) => {
+                      const diff = parseFloat(r.collectionDifference);
+                      const isReopened = r.status === 'REOPENED';
+
+                      return (
+                        <tr key={r.id} className="hover:bg-slate-800/40 transition-colors whitespace-nowrap">
+                          <td className="px-3.5 py-3.5 font-bold text-white">
+                            {new Date(r.businessDate).toISOString().slice(0, 10)}
+                          </td>
+                          <td className="px-2.5 py-3.5 text-center font-bold text-amber-400">
+                            {r.totalBottlesSold}
+                          </td>
+                          <td className="px-2.5 py-3.5 text-center text-slate-400">
+                            {r.totalBottlesRemaining}
+                          </td>
+                          <td className="px-3 py-3.5 text-right font-bold text-white">
+                            ₹{parseFloat(r.totalBusiness).toFixed(2)}
+                          </td>
+                          <td className="px-3 py-3.5 text-right text-rose-400">
+                            ₹{parseFloat(r.totalExpenses).toFixed(2)}
+                          </td>
+                          <td className="px-3 py-3.5 text-right text-indigo-400">
+                            ₹{parseFloat(r.onlineCollection).toFixed(2)}
+                          </td>
+                          <td className="px-3 py-3.5 text-right text-teal-400">
+                            ₹{parseFloat(r.offlineCollection).toFixed(2)}
+                          </td>
+                          <td className="px-3.5 py-3.5 text-right font-bold text-amber-400">
+                            ₹{parseFloat(r.totalCollected).toFixed(2)}
+                          </td>
+                          <td className="px-3.5 py-3.5 text-right font-bold text-emerald-400">
+                            ₹{parseFloat(r.finalAmount).toFixed(2)}
+                          </td>
+                          <td className={`px-3 py-3.5 text-right font-bold ${
+                            diff === 0 ? 'text-slate-400' : diff > 0 ? 'text-emerald-400' : 'text-rose-400'
                           }`}>
-                            {r.status}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3.5 font-sans text-slate-400 truncate max-w-[120px]">
-                          {r.closedBy || 'Admin'}
-                        </td>
-                        <td className="px-3.5 py-3.5 text-right font-sans whitespace-nowrap">
-                          <div className="inline-flex items-center gap-1.5">
-                            <button
-                              onClick={() => handleExportPdf(r)}
-                              disabled={exportingPdfId === (r.id || r.businessDate)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-rose-300 hover:text-rose-200 text-xs rounded-lg transition-colors border border-slate-700 font-medium disabled:opacity-50"
-                              title="Download Daily Closing PDF"
-                            >
-                              <FileText className={`w-3.5 h-3.5 ${exportingPdfId === (r.id || r.businessDate) ? 'animate-bounce' : ''}`} />
-                              {exportingPdfId === (r.id || r.businessDate) ? '...' : 'PDF'}
-                            </button>
-                            <button
-                              onClick={() => handleOpenDetails(r)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition-colors border border-slate-700 font-medium"
-                            >
-                              <Eye className="w-3.5 h-3.5 text-amber-400" />
-                              View
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                            {diff > 0 ? `+₹${diff.toFixed(2)}` : `₹${diff.toFixed(2)}`}
+                          </td>
+                          <td className="px-3 py-3.5 text-right text-slate-500">
+                            ₹{parseFloat(r.extraAmountInformational || 0).toFixed(2)}
+                          </td>
+                          <td className="px-3 py-3.5 text-center font-sans">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              isReopened
+                                ? 'bg-amber-950 text-amber-400 border-amber-800'
+                                : 'bg-emerald-950 text-emerald-400 border-emerald-800'
+                            }`}>
+                              {r.status}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3.5 font-sans text-slate-400 truncate max-w-[120px]">
+                            {r.closedBy || 'Admin'}
+                          </td>
+                          <td className="px-3.5 py-3.5 text-right font-sans whitespace-nowrap">
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleExportPdf(r)}
+                                disabled={exportingPdfId === (r.id || r.businessDate)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-rose-300 hover:text-rose-200 text-xs rounded-lg transition-colors border border-slate-700 font-medium disabled:opacity-50"
+                                title="Download Daily Closing PDF"
+                              >
+                                <FileText className={`w-3.5 h-3.5 ${exportingPdfId === (r.id || r.businessDate) ? 'animate-bounce' : ''}`} />
+                                <span>{exportingPdfId === (r.id || r.businessDate) ? '...' : 'PDF'}</span>
+                              </button>
+                              <button
+                                onClick={() => handleOpenDetails(r)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition-colors border border-slate-700 font-medium"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-amber-400" />
+                                <span>View</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 
-        {/* View Details Modal */}
+        {/* View Details Statement Modal */}
         {selectedRecord && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-4xl w-full p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 animate-in fade-in duration-200">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
               {/* Modal Header */}
               <div className="flex justify-between items-start border-b border-slate-800 pb-3">
                 <div>
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-amber-500" />
+                  <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-amber-500 shrink-0" />
                     Daily Business Closing Statement
                   </h3>
                   <p className="text-xs text-amber-400 font-medium mt-0.5">
                     {selectedShop?.name} — {new Date(selectedRecord.businessDate).toISOString().slice(0, 10)}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => handleExportPdf(selectedRecord)}
                     disabled={exportingPdfId === (selectedRecord.id || new Date(selectedRecord.businessDate).toISOString().slice(0, 10))}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 border border-rose-800 text-xs rounded-xl font-medium transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 border border-rose-800 text-xs rounded-xl font-medium transition-colors disabled:opacity-50"
                     title="Download as PDF"
                   >
-                    <FileText className={`w-3.5 h-3.5 ${exportingPdfId === (selectedRecord.id || new Date(selectedRecord.businessDate).toISOString().slice(0, 10)) ? 'animate-bounce' : ''}`} />
-                    {exportingPdfId === (selectedRecord.id || new Date(selectedRecord.businessDate).toISOString().slice(0, 10)) ? 'Generating...' : 'PDF'}
+                    <FileText className="w-3.5 h-3.5" />
+                    <span className="hidden xs:inline">PDF</span>
                   </button>
                   <button
                     onClick={() => handleExportSingleExcel(selectedRecord)}
                     disabled={exportingExcelId === (selectedRecord.id || new Date(selectedRecord.businessDate).toISOString().slice(0, 10))}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-950/60 hover:bg-teal-900/60 text-teal-300 border border-teal-800 text-xs rounded-xl font-medium transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-teal-950/60 hover:bg-teal-900/60 text-teal-300 border border-teal-800 text-xs rounded-xl font-medium transition-colors disabled:opacity-50"
                     title="Download as Excel"
                   >
-                    <FileSpreadsheet className={`w-3.5 h-3.5 ${exportingExcelId === (selectedRecord.id || new Date(selectedRecord.businessDate).toISOString().slice(0, 10)) ? 'animate-bounce' : ''}`} />
-                    {exportingExcelId === (selectedRecord.id || new Date(selectedRecord.businessDate).toISOString().slice(0, 10)) ? 'Generating...' : 'Excel'}
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    <span className="hidden xs:inline">Excel</span>
                   </button>
                   <button
                     onClick={() => setSelectedRecord(null)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800 transition-colors ml-1"
+                    aria-label="Close details"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -574,10 +651,10 @@ const ClosingHistory = () => {
               )}
 
               {/* Navigation Tabs */}
-              <div className="flex border-b border-slate-800 text-xs">
+              <div className="flex border-b border-slate-800 text-xs overflow-x-auto">
                 <button
                   onClick={() => setDetailTab('FINANCIAL')}
-                  className={`flex items-center gap-2 px-4 py-2.5 font-bold transition-all border-b-2 ${
+                  className={`flex items-center gap-2 px-4 py-2.5 font-bold transition-all border-b-2 whitespace-nowrap ${
                     detailTab === 'FINANCIAL'
                       ? 'border-amber-500 text-amber-400 bg-slate-800/40'
                       : 'border-transparent text-slate-400 hover:text-white'
@@ -588,14 +665,14 @@ const ClosingHistory = () => {
                 </button>
                 <button
                   onClick={() => setDetailTab('STOCK')}
-                  className={`flex items-center gap-2 px-4 py-2.5 font-bold transition-all border-b-2 ${
+                  className={`flex items-center gap-2 px-4 py-2.5 font-bold transition-all border-b-2 whitespace-nowrap ${
                     detailTab === 'STOCK'
                       ? 'border-amber-500 text-amber-400 bg-slate-800/40'
                       : 'border-transparent text-slate-400 hover:text-white'
                   }`}
                 >
                   <ClipboardList className="w-4 h-4" />
-                  Daily Stock Breakdown ({detailStock.length} Brands/Sizes)
+                  Daily Stock Breakdown ({detailStock.length})
                 </button>
               </div>
 
@@ -605,29 +682,29 @@ const ClosingHistory = () => {
                 /* Tab 1: Financial & Expenses Statement */
                 <div className="space-y-4 text-xs">
                   {/* Summary Metric Strip */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-xl bg-slate-950 border border-slate-800 font-mono">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 p-3.5 rounded-xl bg-slate-950 border border-slate-800 font-mono">
                     <div>
-                      <span className="text-[10px] uppercase text-slate-500 font-bold">Total Stock Business</span>
-                      <p className="text-base font-bold text-white">₹{parseFloat(selectedRecord.totalBusiness).toFixed(2)}</p>
+                      <span className="text-[10px] uppercase text-slate-500 font-bold block">Total Stock Business</span>
+                      <p className="text-sm sm:text-base font-bold text-white">₹{parseFloat(selectedRecord.totalBusiness).toFixed(2)}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] uppercase text-slate-500 font-bold">Total Collected</span>
-                      <p className="text-base font-bold text-amber-400">₹{parseFloat(selectedRecord.totalCollected).toFixed(2)}</p>
+                      <span className="text-[10px] uppercase text-slate-500 font-bold block">Total Collected</span>
+                      <p className="text-sm sm:text-base font-bold text-amber-400">₹{parseFloat(selectedRecord.totalCollected).toFixed(2)}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] uppercase text-slate-500 font-bold">Total Expenses</span>
-                      <p className="text-base font-bold text-rose-400">₹{parseFloat(selectedRecord.totalExpenses).toFixed(2)}</p>
+                      <span className="text-[10px] uppercase text-slate-500 font-bold block">Total Expenses</span>
+                      <p className="text-sm sm:text-base font-bold text-rose-400">₹{parseFloat(selectedRecord.totalExpenses).toFixed(2)}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] uppercase text-slate-500 font-bold">Final Net Amount</span>
-                      <p className="text-base font-extrabold text-emerald-400">₹{parseFloat(selectedRecord.finalAmount).toFixed(2)}</p>
+                      <span className="text-[10px] uppercase text-slate-500 font-bold block">Final Net Amount</span>
+                      <p className="text-sm sm:text-base font-extrabold text-emerald-400">₹{parseFloat(selectedRecord.finalAmount).toFixed(2)}</p>
                     </div>
                   </div>
 
                   {/* Reconciled Breakdown */}
-                  <div className="divide-y divide-slate-800 bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono space-y-2">
-                    <div className="flex justify-between pt-2">
-                      <span className="text-slate-400 font-sans">Online Collection (UPI / POS / Card):</span>
+                  <div className="divide-y divide-slate-800 bg-slate-950 p-3.5 sm:p-4 rounded-xl border border-slate-800 font-mono space-y-2">
+                    <div className="flex justify-between pt-1">
+                      <span className="text-slate-400 font-sans">Online Collection (UPI / POS):</span>
                       <span className="text-indigo-400">₹{parseFloat(selectedRecord.onlineCollection).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between pt-2">
@@ -635,7 +712,7 @@ const ClosingHistory = () => {
                       <span className="text-teal-400">₹{parseFloat(selectedRecord.offlineCollection).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between pt-2">
-                      <span className="text-slate-400 font-sans">Collection Difference (Collected - Business):</span>
+                      <span className="text-slate-400 font-sans">Collection Difference:</span>
                       <span className={`font-bold ${parseFloat(selectedRecord.collectionDifference) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {parseFloat(selectedRecord.collectionDifference) >= 0 ? '+' : ''}₹{parseFloat(selectedRecord.collectionDifference).toFixed(2)}
                       </span>
@@ -647,7 +724,7 @@ const ClosingHistory = () => {
                   </div>
 
                   {/* Itemized Expenses Breakdown */}
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+                  <div className="bg-slate-950 p-3.5 sm:p-4 rounded-xl border border-slate-800 space-y-2">
                     <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                       <Receipt className="w-4 h-4 text-rose-400" />
                       Itemized Expenses Deducted ({detailExpenses.length})
@@ -669,7 +746,7 @@ const ClosingHistory = () => {
                                 </span>
                               )}
                             </div>
-                            <span className="font-bold text-rose-400">₹{parseFloat(exp.amount).toFixed(2)}</span>
+                            <span className="font-bold text-rose-400 shrink-0 ml-2">₹{parseFloat(exp.amount).toFixed(2)}</span>
                           </div>
                         ))}
                       </div>
@@ -741,7 +818,7 @@ const ClosingHistory = () => {
                     <p className="text-slate-500 italic text-center py-8">No daily stock records found for this date.</p>
                   ) : (
                     <div className="overflow-x-auto border border-slate-800 rounded-xl">
-                      <table className="w-full text-left text-xs text-slate-300 font-mono">
+                      <table className="w-full text-left text-xs text-slate-300 font-mono min-w-[700px]">
                         <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-800">
                           <tr>
                             <th className="px-3 py-2.5 text-center">S.No.</th>
@@ -791,11 +868,11 @@ const ClosingHistory = () => {
               )}
 
               {/* Modal Footer Actions */}
-              <div className="flex justify-between items-center pt-3 border-t border-slate-800">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-3 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl"
+                  className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl transition-colors"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   Print Statement
@@ -803,7 +880,7 @@ const ClosingHistory = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedRecord(null)}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl"
+                  className="w-full sm:w-auto px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-xl text-center transition-colors"
                 >
                   Close
                 </button>

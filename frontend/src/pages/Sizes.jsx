@@ -13,7 +13,8 @@ import {
   RefreshCw, 
   Info,
   ShieldAlert,
-  ArrowRight
+  ArrowRight,
+  X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -203,22 +204,22 @@ const Sizes = () => {
 
   return (
     <Layout title="Reusable Size Master">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header & Controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 bg-slate-900/60 p-3.5 sm:p-5 rounded-2xl border border-slate-800">
           <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-              <Layers className="w-6 h-6 text-amber-500" />
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+              <Layers className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 shrink-0" />
               Size Master
             </h1>
-            <p className="text-sm text-slate-400">
+            <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
               Manage standard bottle sizes, volumes, and active statuses across all wine shops
             </p>
           </div>
 
           <button
             onClick={handleOpenCreate}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-amber-950/30 transition-all self-start sm:self-auto"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs sm:text-sm rounded-xl shadow-lg shadow-amber-950/30 transition-all self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" />
             Add New Size
@@ -227,14 +228,14 @@ const Sizes = () => {
 
         {/* Global Notifications */}
         {errorMsg && (
-          <div className="p-4 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs flex items-center gap-2">
+          <div className="p-3.5 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="p-4 rounded-xl bg-emerald-950/50 border border-emerald-800/50 text-emerald-300 text-xs flex items-center gap-2">
+          <div className="p-3.5 rounded-xl bg-emerald-950/50 border border-emerald-800/50 text-emerald-300 text-xs flex items-center gap-2">
             <CheckCircle className="w-4 h-4 shrink-0 text-emerald-400" />
             <span>{successMsg}</span>
           </div>
@@ -249,12 +250,12 @@ const Sizes = () => {
               placeholder="Search by code (e.g. Q, P) or display name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 text-xs">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 text-xs shrink-0">
               <button
                 onClick={() => setStatusFilter('all')}
                 className={`px-3 py-1.5 rounded-lg transition-colors font-medium ${
@@ -289,20 +290,20 @@ const Sizes = () => {
 
             <button
               onClick={fetchSizes}
-              className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
+              className="p-2 sm:p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors shrink-0"
               title="Refresh Sizes"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
 
-        {/* Sizes Table */}
+        {/* Sizes List Container */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
           {loading ? (
             <div className="p-12 text-center text-slate-500 text-xs">Loading bottle sizes...</div>
           ) : sizes.length === 0 ? (
-            <div className="p-12 text-center text-slate-500 text-xs space-y-2">
+            <div className="p-12 text-center text-slate-400 text-xs space-y-2">
               <p>No bottle sizes found matching the current search criteria.</p>
               <button
                 onClick={handleOpenCreate}
@@ -313,119 +314,198 @@ const Sizes = () => {
               </button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-800 whitespace-nowrap">
-                  <tr>
-                    <th className="px-4 py-3 text-center">S.No.</th>
-                    <th className="px-4 py-3">Code / Abbr</th>
-                    <th className="px-4 py-3">Display Name</th>
-                    <th className="px-4 py-3 text-right">Volume</th>
-                    <th className="px-4 py-3">Description</th>
-                    <th className="px-4 py-3 text-center">Referenced In</th>
-                    <th className="px-4 py-3 text-center">Status</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
-                  {sizes.map((s, idx) => {
-                    const ratesCount = s._count?.rates || 0;
-                    const stockCount = s._count?.dailyStockRecords || 0;
-                    const isReferenced = ratesCount > 0 || stockCount > 0;
+            <>
+              {/* Mobile Size Cards (< md) */}
+              <div className="md:hidden divide-y divide-slate-800/80 p-2 sm:p-3 space-y-2">
+                {sizes.map((s, idx) => {
+                  const ratesCount = s._count?.rates || 0;
+                  const stockCount = s._count?.dailyStockRecords || 0;
+                  const isReferenced = ratesCount > 0 || stockCount > 0;
 
-                    return (
-                      <tr key={s.id} className="hover:bg-slate-800/40 transition-colors">
-                        <td className="px-4 py-3.5 text-center text-slate-500 font-mono">
-                          {idx + 1}
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-amber-950/60 text-amber-400 border border-amber-800/50">
+                  return (
+                    <div key={s.id} className="p-3.5 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-mono font-bold bg-amber-950/60 text-amber-400 border border-amber-800/50">
                             {s.code}
                           </span>
-                        </td>
-                        <td className="px-4 py-3.5 font-bold text-white">
-                          {s.name}
-                        </td>
-                        <td className="px-4 py-3.5 text-right font-mono text-slate-300">
-                          {s.volumeMl ? `${s.volumeMl} ml` : '—'}
-                        </td>
-                        <td className="px-4 py-3.5 text-slate-400 max-w-xs truncate">
-                          {s.description || '—'}
-                        </td>
-                        <td className="px-4 py-3.5 text-center">
-                          <span 
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border ${
-                              isReferenced
-                                ? 'bg-indigo-950/60 text-indigo-300 border-indigo-800/50'
-                                : 'bg-slate-950 text-slate-500 border-slate-800'
-                            }`}
-                            title={`${ratesCount} brand rate(s), ${stockCount} daily stock record(s)`}
-                          >
-                            <span>{ratesCount} rates</span>
-                            <span>•</span>
-                            <span>{stockCount} stock</span>
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-center">
-                          <button
-                            onClick={() => handleToggleStatus(s)}
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors ${
-                              s.isActive
-                                ? 'bg-emerald-950 text-emerald-400 border-emerald-800 hover:bg-emerald-900/50'
-                                : 'bg-slate-950 text-slate-500 border-slate-800 hover:bg-slate-800'
-                            }`}
-                            title="Click to toggle status"
-                          >
-                            {s.isActive ? (
-                              <>
-                                <CheckCircle className="w-3 h-3" />
-                                Active
-                              </>
-                            ) : (
-                              <>
-                                <XCircle className="w-3 h-3" />
-                                Inactive
-                              </>
-                            )}
-                          </button>
-                        </td>
-                        <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                          <div className="inline-flex items-center gap-1.5">
-                            <button
-                              onClick={() => handleOpenEdit(s)}
-                              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors border border-slate-700"
-                              title="Edit Size"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(s)}
-                              className={`p-1.5 rounded-lg transition-colors border ${
-                                isReferenced
-                                  ? 'bg-slate-800/60 text-slate-500 border-slate-800 hover:text-rose-400'
-                                  : 'bg-rose-950/30 hover:bg-rose-900/50 text-rose-400 border-rose-900/40'
-                              }`}
-                              title={isReferenced ? 'Referenced in catalog (safe deactivation advised)' : 'Delete Size'}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                          <div>
+                            <h3 className="font-bold text-white text-sm">{s.name}</h3>
+                            <span className="text-[11px] font-mono text-slate-400">
+                              {s.volumeMl ? `${s.volumeMl} ml` : 'Standard'}
+                            </span>
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+
+                        <button
+                          onClick={() => handleToggleStatus(s)}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors shrink-0 ${
+                            s.isActive
+                              ? 'bg-emerald-950 text-emerald-400 border-emerald-800 hover:bg-emerald-900/50'
+                              : 'bg-slate-950 text-slate-500 border-slate-800 hover:bg-slate-800'
+                          }`}
+                        >
+                          {s.isActive ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                          {s.isActive ? 'Active' : 'Inactive'}
+                        </button>
+                      </div>
+
+                      {s.description && (
+                        <p className="text-xs text-slate-400">{s.description}</p>
+                      )}
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs">
+                        <span 
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono border ${
+                            isReferenced
+                              ? 'bg-indigo-950/60 text-indigo-300 border-indigo-800/50'
+                              : 'bg-slate-950 text-slate-500 border-slate-800'
+                          }`}
+                        >
+                          {ratesCount} rates • {stockCount} stock
+                        </span>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleOpenEdit(s)}
+                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors border border-slate-700"
+                            title="Edit Size"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(s)}
+                            className={`p-1.5 rounded-lg transition-colors border ${
+                              isReferenced
+                                ? 'bg-slate-800/60 text-slate-500 border-slate-800 hover:text-rose-400'
+                                : 'bg-rose-950/30 hover:bg-rose-900/50 text-rose-400 border-rose-900/40'
+                            }`}
+                            title={isReferenced ? 'Referenced in catalog' : 'Delete Size'}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table (>= md) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-800 whitespace-nowrap">
+                    <tr>
+                      <th className="px-4 py-3 text-center">S.No.</th>
+                      <th className="px-4 py-3">Code / Abbr</th>
+                      <th className="px-4 py-3">Display Name</th>
+                      <th className="px-4 py-3 text-right">Volume</th>
+                      <th className="px-4 py-3">Description</th>
+                      <th className="px-4 py-3 text-center">Referenced In</th>
+                      <th className="px-4 py-3 text-center">Status</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 font-sans">
+                    {sizes.map((s, idx) => {
+                      const ratesCount = s._count?.rates || 0;
+                      const stockCount = s._count?.dailyStockRecords || 0;
+                      const isReferenced = ratesCount > 0 || stockCount > 0;
+
+                      return (
+                        <tr key={s.id} className="hover:bg-slate-800/40 transition-colors">
+                          <td className="px-4 py-3.5 text-center text-slate-500 font-mono">
+                            {idx + 1}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-amber-950/60 text-amber-400 border border-amber-800/50">
+                              {s.code}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 font-bold text-white">
+                            {s.name}
+                          </td>
+                          <td className="px-4 py-3.5 text-right font-mono text-slate-300">
+                            {s.volumeMl ? `${s.volumeMl} ml` : '—'}
+                          </td>
+                          <td className="px-4 py-3.5 text-slate-400 max-w-xs truncate">
+                            {s.description || '—'}
+                          </td>
+                          <td className="px-4 py-3.5 text-center">
+                            <span 
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border ${
+                                isReferenced
+                                  ? 'bg-indigo-950/60 text-indigo-300 border-indigo-800/50'
+                                  : 'bg-slate-950 text-slate-500 border-slate-800'
+                              }`}
+                              title={`${ratesCount} brand rate(s), ${stockCount} daily stock record(s)`}
+                            >
+                              <span>{ratesCount} rates</span>
+                              <span>•</span>
+                              <span>{stockCount} stock</span>
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-center">
+                            <button
+                              onClick={() => handleToggleStatus(s)}
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors ${
+                                s.isActive
+                                  ? 'bg-emerald-950 text-emerald-400 border-emerald-800 hover:bg-emerald-900/50'
+                                  : 'bg-slate-950 text-slate-500 border-slate-800 hover:bg-slate-800'
+                              }`}
+                              title="Click to toggle status"
+                            >
+                              {s.isActive ? (
+                                <>
+                                  <CheckCircle className="w-3 h-3" />
+                                  Active
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="w-3 h-3" />
+                                  Inactive
+                                </>
+                              )}
+                            </button>
+                          </td>
+                          <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleOpenEdit(s)}
+                                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors border border-slate-700"
+                                title="Edit Size"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(s)}
+                                className={`p-1.5 rounded-lg transition-colors border ${
+                                  isReferenced
+                                    ? 'bg-slate-800/60 text-slate-500 border-slate-800 hover:text-rose-400'
+                                    : 'bg-rose-950/30 hover:bg-rose-900/50 text-rose-400 border-rose-900/40'
+                                }`}
+                                title={isReferenced ? 'Referenced in catalog (safe deactivation advised)' : 'Delete Size'}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 
         {/* Quick Navigation Footer */}
-        <div className="flex items-center justify-between p-4 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-400">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-3.5 sm:p-4 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-400">
           <div className="flex items-center gap-2">
             <Info className="w-4 h-4 text-amber-500 shrink-0" />
             <span>
-              Active sizes configured here are dynamically loaded when configuring sizes & rates on the <strong>Daily Stock Sheet</strong> and <strong>Brand Management</strong>.
+              Active sizes configured here are dynamically loaded when configuring sizes & rates on the <strong>Daily Stock Sheet</strong>.
             </span>
           </div>
           <Link
@@ -440,18 +520,19 @@ const Sizes = () => {
 
       {/* Add / Edit Size Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                 <Layers className="w-5 h-5 text-amber-500" />
                 {editingSize ? `Edit Size: ${editingSize.code}` : 'Add New Bottle Size'}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+                className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                aria-label="Close modal"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -473,7 +554,7 @@ const Sizes = () => {
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono placeholder-slate-600 focus:outline-none focus:border-amber-500 uppercase"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono placeholder-slate-600 focus:outline-none focus:border-amber-500 uppercase text-xs sm:text-sm"
                 />
                 <p className="text-[11px] text-slate-500 mt-1">
                   Short unique abbreviation used in table headers and reports.
@@ -490,7 +571,7 @@ const Sizes = () => {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 text-xs sm:text-sm"
                 />
               </div>
 
@@ -505,7 +586,7 @@ const Sizes = () => {
                   placeholder="e.g. 750, 375, 180, 1000"
                   value={volumeMl}
                   onChange={(e) => setVolumeMl(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono placeholder-slate-600 focus:outline-none focus:border-amber-500 text-xs sm:text-sm"
                 />
                 <p className="text-[11px] text-slate-500 mt-1">
                   Optional bottle capacity in milliliters. Used for standard sorting.
@@ -521,7 +602,7 @@ const Sizes = () => {
                   placeholder="Optional size notes..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 resize-none"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 resize-none text-xs sm:text-sm"
                 />
               </div>
 
@@ -533,23 +614,23 @@ const Sizes = () => {
                   onChange={(e) => setIsActive(e.target.checked)}
                   className="w-4 h-4 rounded bg-slate-950 border-slate-800 text-amber-600 focus:ring-0 cursor-pointer"
                 />
-                <label htmlFor="isActiveToggle" className="text-slate-300 font-semibold cursor-pointer">
+                <label htmlFor="isActiveToggle" className="text-slate-300 font-semibold cursor-pointer select-none">
                   Active (available for brand rate configuration and daily stock sheet)
                 </label>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex justify-end gap-2 sm:gap-3 pt-3 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors font-medium"
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors font-medium text-xs sm:text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl transition-colors font-semibold shadow-md shadow-amber-950/30 disabled:opacity-50"
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl transition-colors font-semibold shadow-md shadow-amber-950/30 disabled:opacity-50 text-xs sm:text-sm"
                 >
                   {submitting ? 'Saving...' : editingSize ? 'Update Size' : 'Create Size'}
                 </button>
@@ -561,8 +642,8 @@ const Sizes = () => {
 
       {/* Blocked Deletion / Safe Deactivation Advising Modal */}
       {blockedDeleteSize && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-rose-900/50 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-rose-900/50 rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center gap-3 text-rose-400">
               <div className="p-2 rounded-xl bg-rose-950/60 border border-rose-800/60">
                 <ShieldAlert className="w-6 h-6 text-rose-400" />
@@ -590,7 +671,7 @@ const Sizes = () => {
               </p>
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-2">
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
               <button
                 onClick={() => setBlockedDeleteSize(null)}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition-colors"

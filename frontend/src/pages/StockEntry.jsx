@@ -84,10 +84,8 @@ const StockEntry = () => {
     }
   };
 
-  // Rule 1: Total Expected Bottles Calculation
   const totalBottles = (parseInt(numberOfBoxes, 10) || 0) * (parseInt(bottlesPerBox, 10) || 0);
 
-  // Extract flattened serial list depending on active mode
   const getActiveSerialList = () => {
     if (entryMode === 'per_bottle') {
       return serialsGrid.flatMap(row => row.map(s => s.trim())).filter(Boolean);
@@ -112,7 +110,6 @@ const StockEntry = () => {
 
   const isValidCount = filledCount === totalBottles && totalBottles > 0 && !hasDuplicates;
 
-  // Update specific bottle in grid
   const handleBottleSerialChange = (boxIdx, bottleIdx, val) => {
     setSerialsGrid(prev => {
       const next = prev.map(row => [...row]);
@@ -121,7 +118,6 @@ const StockEntry = () => {
     });
   };
 
-  // Auto-advance focus to next bottle input when Enter is pressed
   const handleKeyDown = (e, boxIdx, bottleIdx) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -145,7 +141,6 @@ const StockEntry = () => {
     }
   };
 
-  // Helper: Auto-fill sequential serials for a specific box
   const handleAutoFillBox = (boxIdx) => {
     const startVal = serialsGrid[boxIdx]?.[0]?.trim();
     if (!startVal) {
@@ -153,7 +148,6 @@ const StockEntry = () => {
       return;
     }
 
-    // Match trailing numbers: e.g. "RS10001" -> prefix "RS", num "10001"
     const match = startVal.match(/^(.*?)(\d+)$/);
     if (!match) {
       alert('Serial number must end with digits to auto-fill sequentially (e.g. RS10001).');
@@ -181,7 +175,6 @@ const StockEntry = () => {
     });
   };
 
-  // Helper: Clear a specific box
   const handleClearBox = (boxIdx) => {
     const numBottles = parseInt(bottlesPerBox, 10);
     setSerialsGrid(prev => {
@@ -191,7 +184,6 @@ const StockEntry = () => {
     });
   };
 
-  // Helper: Paste lines into a specific box
   const handlePasteBox = (boxIdx, e) => {
     e.preventDefault();
     const pastedText = e.clipboardData.getData('text');
@@ -209,7 +201,6 @@ const StockEntry = () => {
     }
   };
 
-  // Sync grid to bulk text when switching modes
   const handleToggleMode = (mode) => {
     if (mode === 'bulk_paste' && entryMode === 'per_bottle') {
       const list = serialsGrid.flatMap(row => row.map(s => s.trim())).filter(Boolean);
@@ -274,24 +265,29 @@ const StockEntry = () => {
 
   return (
     <Layout title="New Stock Entry">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white tracking-tight">Create Stock Entry</h1>
-          <p className="text-sm text-slate-400">Receive stock boxes and enter physical serial numbers for every bottle</p>
+      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
+        <div className="bg-slate-900/60 p-3.5 sm:p-5 rounded-2xl border border-slate-800">
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            <Package className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 shrink-0" />
+            Create Stock Entry
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+            Receive stock boxes and enter physical serial numbers for every bottle
+          </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-sm flex items-center gap-3 shadow-lg">
+          <div className="p-3.5 sm:p-4 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs sm:text-sm flex items-center gap-3 shadow-lg">
             <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
           {/* Section 1: Product & Quantity Setup */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
-            <h2 className="text-base font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
-              <Package className="w-5 h-5 text-amber-500" />
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-5">
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+              <Package className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 shrink-0" />
               Product Selection & Quantity Calculation
             </h2>
 
@@ -306,10 +302,10 @@ const StockEntry = () => {
                   required
                   value={selectedProductId}
                   onChange={handleProductChange}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500 font-semibold"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-500 font-semibold"
                 >
                   {products.map((p) => (
-                    <option key={p.id} value={p.id}>
+                    <option key={p.id} value={p.id} className="bg-slate-900 text-white">
                       {p.name} ({p.brand?.name}) — {p.bottleVolume} ({p.bottlesPerBox} bottles/box)
                     </option>
                   ))}
@@ -317,9 +313,9 @@ const StockEntry = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-5">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-2">
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 sm:mb-2">
                   Number of Boxes *
                 </label>
                 <input
@@ -328,12 +324,12 @@ const StockEntry = () => {
                   required
                   value={numberOfBoxes}
                   onChange={(e) => setNumberOfBoxes(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500 font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-500 font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-2">
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 sm:mb-2">
                   Bottles Per Box *
                 </label>
                 <input
@@ -342,22 +338,22 @@ const StockEntry = () => {
                   required
                   value={bottlesPerBox}
                   onChange={(e) => setBottlesPerBox(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500 font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-500 font-mono"
                 />
               </div>
 
               {/* Calculated Total Bottles Output */}
               <div className="bg-amber-950/30 border border-amber-800/40 rounded-xl p-3 flex flex-col justify-center text-center">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">Total Expected Bottles</span>
-                <span className="text-2xl font-extrabold text-white mt-0.5 font-mono">
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-amber-400">Total Expected Bottles</span>
+                <span className="text-xl sm:text-2xl font-extrabold text-white mt-0.5 font-mono">
                   {numberOfBoxes} × {bottlesPerBox} = <span className="text-amber-400">{totalBottles}</span>
                 </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-5 pt-1">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-2">
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 sm:mb-2">
                   Purchase Box Price (₹) *
                 </label>
                 <input
@@ -367,12 +363,12 @@ const StockEntry = () => {
                   required
                   value={boxPrice}
                   onChange={(e) => setBoxPrice(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-emerald-400 font-mono text-sm focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-emerald-400 font-mono text-xs sm:text-sm focus:outline-none focus:border-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-2">
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 sm:mb-2">
                   Purchase Bottle Price (₹) *
                 </label>
                 <input
@@ -382,22 +378,22 @@ const StockEntry = () => {
                   required
                   value={bottlePrice}
                   onChange={(e) => setBottlePrice(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-emerald-400 font-mono text-sm focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-emerald-400 font-mono text-xs sm:text-sm focus:outline-none focus:border-amber-500"
                 />
               </div>
             </div>
           </div>
 
           {/* Section 2: Physical Serial Numbers Input */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800 pb-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-800 pb-4">
               <div className="flex items-center gap-2">
-                <Barcode className="w-5 h-5 text-amber-500" />
-                <h2 className="text-base font-bold text-white">Bottle Serial Numbers Entry</h2>
+                <Barcode className="w-5 h-5 text-amber-500 shrink-0" />
+                <h2 className="text-sm sm:text-base font-bold text-white">Bottle Serial Numbers Entry</h2>
               </div>
 
               {/* Mode Toggle Buttons */}
-              <div className="flex items-center gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800">
+              <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 self-start sm:self-auto">
                 <button
                   type="button"
                   onClick={() => handleToggleMode('per_bottle')}
@@ -448,9 +444,9 @@ const StockEntry = () => {
 
             {/* MODE A: PER-BOTTLE GRID */}
             {entryMode === 'per_bottle' ? (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {serialsGrid.map((boxRow, boxIdx) => (
-                  <div key={boxIdx} className="bg-slate-950 border border-slate-800/80 rounded-xl p-4 space-y-3">
+                  <div key={boxIdx} className="bg-slate-950 border border-slate-800/80 rounded-xl p-3 sm:p-4 space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/60 pb-2.5">
                       <span className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-amber-500"></span>
@@ -480,7 +476,7 @@ const StockEntry = () => {
                     </div>
 
                     {/* Per-Bottle Grid Inputs */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3 pt-1">
                       {boxRow.map((val, bottleIdx) => {
                         const globalBottleNumber = (boxIdx * bottlesPerBox) + bottleIdx + 1;
                         const isDup = val.trim() && serialCounts[val.trim()] > 1;
@@ -533,7 +529,7 @@ const StockEntry = () => {
                   value={bulkText}
                   onChange={(e) => setBulkText(e.target.value)}
                   placeholder="RS10001&#10;RS10002&#10;RS10003&#10;..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-amber-300 font-mono text-sm focus:outline-none focus:border-amber-500 leading-relaxed"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 sm:p-4 text-amber-300 font-mono text-xs sm:text-sm focus:outline-none focus:border-amber-500 leading-relaxed"
                 />
               </div>
             )}
@@ -547,7 +543,7 @@ const StockEntry = () => {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Supplier invoice #, batch notes..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-500"
               />
             </div>
           </div>
@@ -556,9 +552,9 @@ const StockEntry = () => {
             <button
               type="submit"
               disabled={submitting || !isValidCount}
-              className="flex items-center gap-2 px-6 py-3.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-lg shadow-amber-900/30 transition-all disabled:opacity-50 text-sm"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-lg shadow-amber-900/30 transition-all disabled:opacity-50 text-xs sm:text-sm"
             >
-              {submitting ? 'Submitting Entry...' : 'Complete Stock Entry'}
+              <span>{submitting ? 'Submitting Entry...' : 'Complete Stock Entry'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

@@ -1,7 +1,54 @@
 @import "tailwindcss";
 
 @layer base {
-  body {
-    @apply bg-slate-950 text-slate-100 font-sans antialiased;
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
   }
+
+  body {
+    @apply bg-slate-950 text-slate-100 font-sans antialiased selection:bg-amber-600/30 selection:text-amber-200;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* Custom Slim Dark Scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #020617;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #334155;
+  }
+
+  /* Prevent iOS zoom on inputs while keeping text sharp */
+  input, select, textarea {
+    font-size: 14px;
+  }
+
+  @media (max-width: 640px) {
+    input, select, textarea {
+      font-size: 16px;
+    }
+  }
+}
+
+/* Mobile Safe Area Utilities */
+.safe-pb {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
 }

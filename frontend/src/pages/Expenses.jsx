@@ -102,51 +102,53 @@ const Expenses = () => {
 
   return (
     <Layout title="Daily Expense Management">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
+        {/* Header & Date Selector */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 bg-slate-900/60 p-3.5 sm:p-5 rounded-2xl border border-slate-800">
           <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-              <Receipt className="w-6 h-6 text-amber-500" />
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+              <Receipt className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 shrink-0" />
               Daily Expenses
             </h1>
-            <p className="text-sm text-slate-400">
+            <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
               Active Shop: <strong className="text-amber-400">{selectedShop?.name}</strong>
             </p>
           </div>
 
-          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2">
-            <Calendar className="w-4 h-4 text-amber-500" />
+          <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 self-start sm:self-auto">
+            <Calendar className="w-4 h-4 text-amber-500 shrink-0" />
             <input
               type="date"
               value={businessDate}
               onChange={(e) => setBusinessDate(e.target.value)}
               className="bg-transparent text-white font-mono text-xs focus:outline-none cursor-pointer"
+              aria-label="Select expense date"
             />
           </div>
         </div>
 
         {error && (
-          <div className="p-4 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs flex items-center gap-2">
+          <div className="p-3.5 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>{error}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="p-4 rounded-xl bg-emerald-950/50 border border-emerald-800/50 text-emerald-300 text-xs flex items-center gap-2">
+          <div className="p-3.5 rounded-xl bg-emerald-950/50 border border-emerald-800/50 text-emerald-300 text-xs flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
             <span>{successMsg}</span>
           </div>
         )}
 
         {/* Add Expense Form */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-          <h2 className="text-base font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
+          <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
             <Plus className="w-4 h-4 text-amber-500" />
             Add New Expense for {businessDate}
           </h2>
 
-          <form onSubmit={handleAddExpense} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <form onSubmit={handleAddExpense} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Category *</label>
               <select
@@ -229,11 +231,11 @@ const Expenses = () => {
 
         {/* Expenses List */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+          <div className="p-3.5 sm:p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
+            <h2 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">
               Itemized Expenses ({expenses.length})
             </h2>
-            <div className="text-sm font-mono font-bold text-rose-400">
+            <div className="text-xs sm:text-sm font-mono font-bold text-rose-400">
               Total: ₹{totalAmount}
             </div>
           </div>
@@ -241,50 +243,89 @@ const Expenses = () => {
           {loading ? (
             <div className="p-8 text-center text-slate-500 text-xs">Loading expenses...</div>
           ) : expenses.length === 0 ? (
-            <div className="p-8 text-center text-slate-500 text-xs">
+            <div className="p-8 text-center text-slate-400 text-xs">
               No expenses recorded for {businessDate}.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-950/80 text-slate-400 uppercase text-[10px] font-semibold border-b border-slate-800">
-                  <tr>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3">Description</th>
-                    <th className="px-4 py-3">Recipient</th>
-                    <th className="px-4 py-3">Payment</th>
-                    <th className="px-4 py-3 text-right">Amount</th>
-                    <th className="px-4 py-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {expenses.map((exp) => (
-                    <tr key={exp.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="px-4 py-3">
+            <>
+              {/* Mobile Card List (< md) */}
+              <div className="md:hidden divide-y divide-slate-800/80 p-2 sm:p-3 space-y-2">
+                {expenses.map((exp) => (
+                  <div key={exp.id} className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950/60 text-amber-400 border border-amber-800/40">
                           {exp.category}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 font-sans font-semibold text-white">{exp.description}</td>
-                      <td className="px-4 py-3 text-slate-400 font-sans">{exp.recipient || '—'}</td>
-                      <td className="px-4 py-3 text-slate-400">{exp.paymentMethod}</td>
-                      <td className="px-4 py-3 text-right font-bold text-rose-400 font-sans">
-                        ₹{parseFloat(exp.amount).toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => handleDeleteExpense(exp.id)}
-                          className="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 border border-rose-800/30 transition-colors"
-                          title="Delete Expense"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
+                        <h4 className="font-semibold text-white text-sm mt-1">{exp.description}</h4>
+                        {exp.recipient && (
+                          <p className="text-xs text-slate-400 mt-0.5">To: {exp.recipient}</p>
+                        )}
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="text-base font-bold text-rose-400 font-mono">
+                          ₹{parseFloat(exp.amount).toFixed(2)}
+                        </span>
+                        <span className="block text-[10px] text-slate-400 uppercase mt-0.5">{exp.paymentMethod}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-1 border-t border-slate-800/60">
+                      <button
+                        onClick={() => handleDeleteExpense(exp.id)}
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table (>= md) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-950/80 text-slate-400 uppercase text-[10px] font-semibold border-b border-slate-800">
+                    <tr>
+                      <th className="px-4 py-3">Category</th>
+                      <th className="px-4 py-3">Description</th>
+                      <th className="px-4 py-3">Recipient</th>
+                      <th className="px-4 py-3">Payment</th>
+                      <th className="px-4 py-3 text-right">Amount</th>
+                      <th className="px-4 py-3 text-right">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 font-mono">
+                    {expenses.map((exp) => (
+                      <tr key={exp.id} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950/60 text-amber-400 border border-amber-800/40">
+                            {exp.category}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-sans font-semibold text-white">{exp.description}</td>
+                        <td className="px-4 py-3 text-slate-400 font-sans">{exp.recipient || '—'}</td>
+                        <td className="px-4 py-3 text-slate-400">{exp.paymentMethod}</td>
+                        <td className="px-4 py-3 text-right font-bold text-rose-400 font-sans">
+                          ₹{parseFloat(exp.amount).toFixed(2)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => handleDeleteExpense(exp.id)}
+                            className="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 border border-rose-800/30 transition-colors"
+                            title="Delete Expense"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

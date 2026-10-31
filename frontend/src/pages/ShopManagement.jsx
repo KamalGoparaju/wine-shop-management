@@ -87,9 +87,7 @@ const ShopManagement = () => {
 
       if (res.success) {
         setPageSuccess(`Shop "${res.data.shop.code}" updated successfully to "${res.data.shop.name}".`);
-        // Refresh global navbar shop selector and AuthContext
         await refreshShops();
-        // Refresh local table
         await fetchShops();
         handleCloseEdit();
       }
@@ -102,20 +100,20 @@ const ShopManagement = () => {
 
   return (
     <Layout title="Shop Name & Location Management">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header & Controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 bg-slate-900/60 p-3.5 sm:p-5 rounded-2xl border border-slate-800">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-                <Store className="w-6 h-6 text-amber-500" />
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                <Store className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 shrink-0" />
                 Shop Management
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-950 text-amber-400 border border-amber-800">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-amber-950 text-amber-400 border border-amber-800">
                 ADMIN CONSOLE
               </span>
             </div>
-            <p className="text-sm text-slate-400 mt-1">
+            <p className="text-xs sm:text-sm text-slate-400 mt-1">
               Configure business names, locations, and branding across all 3 shops.
             </p>
           </div>
@@ -123,38 +121,38 @@ const ShopManagement = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={fetchShops}
-              className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
+              className="p-2 sm:p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
               title="Refresh Shops List"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
 
         {/* Global Feedback Banners */}
         {pageError && (
-          <div className="p-4 bg-rose-950/60 border border-rose-800/60 rounded-xl text-rose-300 text-xs flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 shrink-0 text-rose-400" />
+          <div className="p-3.5 sm:p-4 bg-rose-950/60 border border-rose-800/60 rounded-xl text-rose-300 text-xs flex items-center gap-3">
+            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-rose-400" />
             <span>{pageError}</span>
           </div>
         )}
 
         {pageSuccess && (
-          <div className="p-4 bg-emerald-950/60 border border-emerald-800/60 rounded-xl text-emerald-300 text-xs flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400" />
+          <div className="p-3.5 sm:p-4 bg-emerald-950/60 border border-emerald-800/60 rounded-xl text-emerald-300 text-xs flex items-center gap-3">
+            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-emerald-400" />
             <span>{pageSuccess}</span>
           </div>
         )}
 
-        {/* Shops Table */}
+        {/* Shops Container */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
-            <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+          <div className="p-3.5 sm:p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
+            <h2 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <Building className="w-4 h-4 text-amber-500" />
               Configured Shops ({shopsList.length})
             </h2>
             <span className="text-[11px] text-slate-400">
-              Active Shop: <strong className="text-amber-400">{selectedShop?.name}</strong> ({selectedShop?.code})
+              Active: <strong className="text-amber-400">{selectedShop?.name}</strong> ({selectedShop?.code})
             </span>
           </div>
 
@@ -169,106 +167,170 @@ const ShopManagement = () => {
               <p className="text-sm font-medium">No shops found in database.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-950/80 border-b border-slate-800 text-slate-400 font-semibold tracking-wider">
-                    <th className="py-3.5 px-4">Shop Code</th>
-                    <th className="py-3.5 px-4">Configured Shop Name</th>
-                    <th className="py-3.5 px-4">Physical Address / Location</th>
-                    <th className="py-3.5 px-4 text-center">Status</th>
-                    <th className="py-3.5 px-4">Created At</th>
-                    <th className="py-3.5 px-4">Last Modified</th>
-                    <th className="py-3.5 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {shopsList.map((shop) => {
-                    const isCurrent = selectedShop?.id === shop.id;
-                    return (
-                      <tr 
-                        key={shop.id}
-                        className={`hover:bg-slate-800/40 transition-colors ${isCurrent ? 'bg-amber-950/10' : ''}`}
-                      >
-                        <td className="py-3.5 px-4">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-bold bg-slate-800 text-amber-400 border border-slate-700">
-                            {shop.code}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 font-sans font-bold text-white text-sm">
+            <>
+              {/* Mobile Shop Cards (< md) */}
+              <div className="md:hidden divide-y divide-slate-800/80 p-2 sm:p-3 space-y-2">
+                {shopsList.map((shop) => {
+                  const isCurrent = selectedShop?.id === shop.id;
+                  return (
+                    <div 
+                      key={shop.id} 
+                      className={`p-3.5 rounded-xl border space-y-2.5 transition-all ${
+                        isCurrent 
+                          ? 'bg-amber-950/20 border-amber-600/40' 
+                          : 'bg-slate-950/60 border-slate-800/80'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
                           <div className="flex items-center gap-2">
-                            <span>{shop.name}</span>
-                            {isCurrent && (
-                              <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono font-normal">
-                                CURRENT
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4 font-sans text-slate-400 max-w-xs truncate">
-                          {shop.address ? (
-                            <span className="flex items-center gap-1.5">
-                              <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                              {shop.address}
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-bold bg-slate-800 text-amber-400 border border-slate-700">
+                              {shop.code}
                             </span>
-                          ) : (
-                            <span className="text-slate-600 italic">No address provided</span>
+                            <h3 className="font-bold text-white text-sm">{shop.name}</h3>
+                          </div>
+                          {isCurrent && (
+                            <span className="inline-block text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono font-medium mt-1">
+                              CURRENT ACTIVE SHOP
+                            </span>
                           )}
-                        </td>
-                        <td className="py-3.5 px-4 text-center font-sans">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                            shop.isActive
-                              ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
-                              : 'bg-rose-950 text-rose-400 border-rose-800'
-                          }`}>
-                            {shop.isActive ? 'ACTIVE' : 'INACTIVE'}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-slate-400 font-sans text-[11px]">
-                          {new Date(shop.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="py-3.5 px-4 text-slate-300 font-sans text-[11px]">
-                          {new Date(shop.updatedAt).toLocaleString()}
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-sans">
-                          {isAdmin ? (
-                            <button
-                              onClick={() => handleOpenEdit(shop)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg transition-colors border border-slate-700 text-xs font-medium"
-                            >
-                              <Edit3 className="w-3.5 h-3.5 text-amber-400" />
-                              Edit
-                            </button>
-                          ) : (
-                            <span className="text-slate-600 text-xs italic">Restricted</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
+                          shop.isActive
+                            ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
+                            : 'bg-rose-950 text-rose-400 border-rose-800'
+                        }`}>
+                          {shop.isActive ? 'ACTIVE' : 'INACTIVE'}
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-slate-400 flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                        <span className="truncate">{shop.address || 'No physical address configured'}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-[11px] text-slate-500">
+                        <span>Updated: {new Date(shop.updatedAt).toLocaleDateString()}</span>
+
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleOpenEdit(shop)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg transition-colors border border-slate-700 text-xs font-medium"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table (>= md) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-950/80 border-b border-slate-800 text-slate-400 font-semibold tracking-wider">
+                      <th className="py-3.5 px-4">Shop Code</th>
+                      <th className="py-3.5 px-4">Configured Shop Name</th>
+                      <th className="py-3.5 px-4">Physical Address / Location</th>
+                      <th className="py-3.5 px-4 text-center">Status</th>
+                      <th className="py-3.5 px-4">Created At</th>
+                      <th className="py-3.5 px-4">Last Modified</th>
+                      <th className="py-3.5 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 font-mono">
+                    {shopsList.map((shop) => {
+                      const isCurrent = selectedShop?.id === shop.id;
+                      return (
+                        <tr 
+                          key={shop.id}
+                          className={`hover:bg-slate-800/40 transition-colors ${isCurrent ? 'bg-amber-950/10' : ''}`}
+                        >
+                          <td className="py-3.5 px-4">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-bold bg-slate-800 text-amber-400 border border-slate-700">
+                              {shop.code}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 font-sans font-bold text-white text-sm">
+                            <div className="flex items-center gap-2">
+                              <span>{shop.name}</span>
+                              {isCurrent && (
+                                <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono font-normal">
+                                  CURRENT
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 font-sans text-slate-400 max-w-xs truncate">
+                            {shop.address ? (
+                              <span className="flex items-center gap-1.5">
+                                <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                {shop.address}
+                              </span>
+                            ) : (
+                              <span className="text-slate-600 italic">No address provided</span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-sans">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              shop.isActive
+                                ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
+                                : 'bg-rose-950 text-rose-400 border-rose-800'
+                            }`}>
+                              {shop.isActive ? 'ACTIVE' : 'INACTIVE'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-400 font-sans text-[11px]">
+                            {new Date(shop.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-300 font-sans text-[11px]">
+                            {new Date(shop.updatedAt).toLocaleString()}
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-sans">
+                            {isAdmin ? (
+                              <button
+                                onClick={() => handleOpenEdit(shop)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg transition-colors border border-slate-700 text-xs font-medium"
+                              >
+                                <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                                Edit
+                              </button>
+                            ) : (
+                              <span className="text-slate-600 text-xs italic">Restricted</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 
         {/* Edit Shop Modal */}
         {editingShop && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex justify-between items-start border-b border-slate-800 pb-3">
-                <div>
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Store className="w-5 h-5 text-amber-500" />
-                    Edit Shop Details
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Configure display name and address for shop code: <strong className="text-amber-400">{editingShop.code}</strong>
-                  </p>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-200">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-xl">
+                    <Store className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">Edit Shop Details</h3>
+                    <p className="text-xs text-amber-400 font-mono">Code: {editingShop.code}</p>
+                  </div>
                 </div>
                 <button
                   onClick={handleCloseEdit}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white bg-slate-800"
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  aria-label="Close modal"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -276,55 +338,39 @@ const ShopManagement = () => {
 
               {modalError && (
                 <div className="p-3 bg-rose-950/60 border border-rose-800/60 text-rose-300 text-xs rounded-xl flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
                   <span>{modalError}</span>
                 </div>
               )}
 
-              <form onSubmit={handleSaveShop} className="space-y-4">
+              <form onSubmit={handleSaveShop} className="space-y-4 text-xs">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">
-                    Shop Code (Stable Identifier)
-                  </label>
-                  <input
-                    type="text"
-                    value={editingShop.code}
-                    disabled
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-500 cursor-not-allowed"
-                    title="Shop Code is a permanent identifier and cannot be altered"
-                  />
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Permanent system identifier linked to historical transactions.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Shop Display Name <span className="text-rose-500">*</span>
+                  <label className="block text-slate-300 font-semibold mb-1 uppercase tracking-wider">
+                    Shop Display Name *
                   </label>
                   <input
                     type="text"
                     required
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    placeholder="e.g. Central Wine Lounge & Spirits"
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 transition-colors"
+                    placeholder="e.g. Royal Wine & Liquor Shop 1"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white font-medium focus:outline-none focus:border-amber-500 text-xs sm:text-sm"
                   />
                   <p className="text-[11px] text-slate-500 mt-1">
-                    This name will appear on the header selector, dashboard, and PDF/CSV reports.
+                    This name will appear on the navigation bar, closing statements, and printed reports.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Physical Address / Branch Location
+                  <label className="block text-slate-300 font-semibold mb-1 uppercase tracking-wider">
+                    Physical Address / Location
                   </label>
                   <textarea
                     rows={3}
                     value={editAddress}
                     onChange={(e) => setEditAddress(e.target.value)}
-                    placeholder="e.g. Main Market Road, City Centre, Near Bus Terminal"
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 transition-colors resize-none"
+                    placeholder="e.g. Plot 42, Main Road, Market Complex..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-500 resize-none text-xs sm:text-sm"
                   />
                 </div>
 
@@ -334,28 +380,28 @@ const ShopManagement = () => {
                     id="editIsActive"
                     checked={editIsActive}
                     onChange={(e) => setEditIsActive(e.target.checked)}
-                    className="w-4 h-4 rounded bg-slate-950 border-slate-800 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                    className="w-4 h-4 rounded bg-slate-950 border-slate-800 text-amber-600 focus:ring-0 cursor-pointer"
                   />
-                  <label htmlFor="editIsActive" className="text-xs text-slate-300 cursor-pointer font-medium">
-                    Shop is Active and available for operations
+                  <label htmlFor="editIsActive" className="text-slate-300 font-semibold cursor-pointer select-none">
+                    Active Shop (available for switching and sales)
                   </label>
                 </div>
 
-                <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-800">
+                <div className="flex justify-end gap-2 sm:gap-3 pt-3 border-t border-slate-800">
                   <button
                     type="button"
                     onClick={handleCloseEdit}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition-colors"
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-medium transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-amber-900/30 transition-all disabled:opacity-50"
+                    className="flex items-center gap-2 px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-semibold shadow-md shadow-amber-900/30 disabled:opacity-50 transition-all"
                   >
                     <Save className="w-4 h-4" />
-                    {submitting ? 'Saving...' : 'Save Changes'}
+                    <span>{submitting ? 'Saving...' : 'Save Changes'}</span>
                   </button>
                 </div>
               </form>

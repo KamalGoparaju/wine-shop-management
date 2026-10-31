@@ -17,7 +17,9 @@ import {
   FileText,
   FileSpreadsheet,
   Plus,
-  X
+  X,
+  LayoutGrid,
+  Table as TableIcon
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { downloadAuthenticatedFile } from '../utils/download';
@@ -34,6 +36,9 @@ const DailyStock = () => {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [meta, setMeta] = useState({});
+
+  // Mobile View Mode: 'cards' or 'table'
+  const [viewMode, setViewMode] = useState('auto'); // 'auto' (cards on mobile, table on desktop), 'cards', 'table'
 
   // Add Brand & Sizes Modal state
   const [showAddBrandModal, setShowAddBrandModal] = useState(false);
@@ -143,7 +148,6 @@ const DailyStock = () => {
 
     if (!currentShopId) return;
 
-    // Reset table immediately on shop switch to clear stale data
     setItems([]);
     setLoading(true);
     setError('');
@@ -154,7 +158,6 @@ const DailyStock = () => {
       headers: { 'x-shop-id': currentShopId }
     })
       .then((res) => {
-        // Prevent late API responses from overwriting the new shop's data
         if (!isCurrent) return;
         if (res.success && res.data.shopId === currentShopId) {
           setItems(res.data.records || []);
@@ -454,120 +457,124 @@ const DailyStock = () => {
 
   return (
     <Layout title="Daily Stock Calculation Sheet">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header & Controls */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* Header & Controls Toolbar */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4 bg-slate-900/60 p-3.5 sm:p-5 rounded-2xl border border-slate-800">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-                <ClipboardList className="w-6 h-6 text-amber-500" />
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 shrink-0" />
                 Daily Stock Sheet
               </h1>
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold border ${
                 meta.isLocked
-                  ? 'bg-rose-950 text-rose-300 border-rose-800'
+                  ? 'bg-rose-950/80 text-rose-300 border-rose-800'
                   : meta.isCompleted
-                  ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                  : 'bg-amber-950 text-amber-300 border-amber-800'
+                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                  : 'bg-amber-950/80 text-amber-300 border-amber-800'
               }`}>
                 {meta.isLocked ? 'LOCKED / CLOSED' : meta.isCompleted ? 'FINALIZED' : 'DRAFT / IN PROGRESS'}
               </span>
             </div>
-            <p className="text-sm text-slate-400">
-              Active Shop: <strong className="text-amber-400">{selectedShop?.name || 'Loading...'}</strong> ({selectedShop?.code})
+            <p className="text-xs sm:text-sm text-slate-400 mt-1">
+              Active Shop: <strong className="text-amber-400">{selectedShop?.name || 'Loading...'}</strong> ({selectedShop?.code || '—'})
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2">
-              <Calendar className="w-4 h-4 text-amber-500" />
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+            {/* Date Picker & Refresh */}
+            <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 sm:py-2 text-xs">
+              <Calendar className="w-3.5 h-3.5 text-amber-500 shrink-0" />
               <input
                 type="date"
                 value={businessDate}
                 onChange={(e) => setBusinessDate(e.target.value)}
                 className="bg-transparent text-white font-mono text-xs focus:outline-none cursor-pointer"
+                aria-label="Select stock date"
               />
             </div>
 
             <button
               onClick={() => fetchDailySheet(businessDate)}
-              className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
+              className="p-2 sm:p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
               title="Reload Sheet"
+              aria-label="Reload Sheet"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
-            {/* Export Actions */}
-            <div className="flex items-center gap-1.5 border-l border-slate-800 pl-2">
+            {/* Export Actions Strip */}
+            <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl p-1">
               <button
                 onClick={handleExportPdf}
                 disabled={exportingPdf || loading || items.length === 0}
-                className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-rose-300 hover:text-rose-200 border border-slate-700 font-medium text-xs rounded-xl transition-all disabled:opacity-50"
+                className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-800 text-rose-300 hover:text-rose-200 text-xs rounded-lg transition-all disabled:opacity-50"
                 title="Download Daily Stock Sheet as PDF"
               >
                 <FileText className={`w-3.5 h-3.5 ${exportingPdf ? 'animate-bounce' : ''}`} />
-                {exportingPdf ? 'Generating...' : 'PDF'}
+                <span className="hidden xs:inline">PDF</span>
               </button>
 
               <button
                 onClick={handleExportExcel}
                 disabled={exportingExcel || loading || items.length === 0}
-                className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-teal-300 hover:text-teal-200 border border-slate-700 font-medium text-xs rounded-xl transition-all disabled:opacity-50"
+                className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-800 text-teal-300 hover:text-teal-200 text-xs rounded-lg transition-all disabled:opacity-50"
                 title="Download Daily Stock Sheet as Excel (.xlsx)"
               >
                 <FileSpreadsheet className={`w-3.5 h-3.5 ${exportingExcel ? 'animate-bounce' : ''}`} />
-                {exportingExcel ? 'Exporting...' : 'Excel'}
+                <span className="hidden xs:inline">Excel</span>
               </button>
 
               <button
                 onClick={handleExportCsv}
                 disabled={exportingCsv || loading || items.length === 0}
-                className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-300 hover:text-emerald-200 border border-slate-700 font-medium text-xs rounded-xl transition-all disabled:opacity-50"
+                className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-800 text-emerald-300 hover:text-emerald-200 text-xs rounded-lg transition-all disabled:opacity-50"
                 title="Export Daily Stock Sheet to CSV"
               >
                 <Download className={`w-3.5 h-3.5 ${exportingCsv ? 'animate-bounce' : ''}`} />
-                {exportingCsv ? 'Exporting...' : 'CSV'}
+                <span className="hidden xs:inline">CSV</span>
               </button>
             </div>
 
+            {/* Primary Action Buttons */}
             {!meta.isLocked && (
-              <>
+              <div className="flex items-center gap-1.5 w-full sm:w-auto">
                 <button
                   onClick={handleOpenAddBrandModal}
-                  className="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold text-xs rounded-xl shadow-lg shadow-emerald-950/30 transition-all"
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold text-xs rounded-xl shadow-lg shadow-emerald-950/30 transition-all"
                   title="Add New Brand & Configure Sizes"
                 >
-                  <Plus className="w-4 h-4" />
-                  Add New Brand
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Brand</span>
                 </button>
 
                 <button
                   onClick={() => handleSave('DRAFT')}
                   disabled={saving || loading || items.length === 0}
-                  className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs rounded-xl transition-all disabled:opacity-50"
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs rounded-xl transition-all disabled:opacity-50"
                   title="Save current progress as draft"
                 >
-                  <Save className="w-4 h-4" />
-                  {saving ? 'Saving...' : 'Save Draft'}
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{saving ? 'Saving...' : 'Draft'}</span>
                 </button>
 
                 <button
                   onClick={() => handleSave('COMPLETED')}
                   disabled={saving || loading || items.length === 0}
-                  className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-amber-900/30 transition-all disabled:opacity-50"
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-amber-900/30 transition-all disabled:opacity-50"
                   title="Finalize sheet with verified closing counts"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  {saving ? 'Finalizing...' : 'Finalize Sheet'}
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>{saving ? 'Finalizing...' : 'Finalize'}</span>
                 </button>
-              </>
+              </div>
             )}
           </div>
         </div>
 
         {/* Informational Alerts */}
         {meta.isLocked && (
-          <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-300 text-xs flex items-center gap-2">
+          <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-300 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>
               <strong>Locked Day:</strong> Daily closing has already been executed for this shop and date. Modifying stock records is restricted.
@@ -576,16 +583,16 @@ const DailyStock = () => {
         )}
 
         {meta.isInitialSetup && (
-          <div className="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-800/40 text-indigo-300 text-xs flex items-center gap-2">
+          <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-800/40 text-indigo-300 text-xs flex items-center gap-2">
             <Info className="w-4 h-4 shrink-0 text-indigo-400" />
             <span>
-              <strong>Initial Opening Setup:</strong> No prior business records found for {selectedShop?.name}. You can enter initial opening balances in the Opening column below.
+              <strong>Initial Opening Setup:</strong> No prior business records found for {selectedShop?.name}. You can enter initial opening balances in the Opening inputs below.
             </span>
           </div>
         )}
 
         {meta.isNewDay && meta.previousDate && !meta.hasDateGap && (
-          <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-800/40 text-amber-300 text-xs flex items-center gap-2">
+          <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-800/40 text-amber-300 text-xs flex items-center gap-2">
             <Info className="w-4 h-4 shrink-0 text-amber-400" />
             <span>
               <strong>Auto Carry-Forward Active:</strong> Opening bottle balances for this sheet were automatically initialized from previous closing records dated <strong>{meta.previousDate}</strong>.
@@ -594,41 +601,41 @@ const DailyStock = () => {
         )}
 
         {meta.hasDateGap && meta.gapWarning && (
-          <div className="p-3.5 rounded-xl bg-amber-950/50 border border-amber-600/50 text-amber-200 text-xs flex items-center gap-2">
+          <div className="p-3 rounded-xl bg-amber-950/50 border border-amber-600/50 text-amber-200 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
             <span>{meta.gapWarning}</span>
           </div>
         )}
 
         {error && (
-          <div className="p-4 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs flex items-center gap-2">
+          <div className="p-3.5 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>{error}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="p-4 rounded-xl bg-emerald-950/50 border border-emerald-800/50 text-emerald-300 text-xs flex items-center gap-2">
+          <div className="p-3.5 rounded-xl bg-emerald-950/50 border border-emerald-800/50 text-emerald-300 text-xs flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
             <span>{successMsg}</span>
           </div>
         )}
 
         {/* Quick KPI Stat Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-          <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3">
+          <div className="bg-slate-900 border border-slate-800 p-2.5 sm:p-3 rounded-xl">
             <span className="text-[10px] font-bold uppercase text-slate-400">Total Opening</span>
-            <p className="text-lg font-bold text-white font-mono mt-0.5">{totalOpening}</p>
+            <p className="text-base sm:text-lg font-bold text-white font-mono mt-0.5 truncate">{totalOpening}</p>
           </div>
-          <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl">
+          <div className="bg-slate-900 border border-slate-800 p-2.5 sm:p-3 rounded-xl">
             <span className="text-[10px] font-bold uppercase text-slate-400">Total Indent</span>
-            <p className="text-lg font-bold text-indigo-400 font-mono mt-0.5">{totalIndent}</p>
+            <p className="text-base sm:text-lg font-bold text-indigo-400 font-mono mt-0.5 truncate">{totalIndent}</p>
           </div>
-          <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl">
+          <div className="bg-slate-900 border border-slate-800 p-2.5 sm:p-3 rounded-xl">
             <span className="text-[10px] font-bold uppercase text-slate-400">Available Bottles</span>
-            <p className="text-lg font-bold text-white font-mono mt-0.5">{totalStockCount}</p>
+            <p className="text-base sm:text-lg font-bold text-white font-mono mt-0.5 truncate">{totalStockCount}</p>
           </div>
-          <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl">
+          <div className="bg-slate-900 border border-slate-800 p-2.5 sm:p-3 rounded-xl">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase text-slate-400">Total Closing</span>
               {incompleteCount > 0 && (
@@ -637,24 +644,28 @@ const DailyStock = () => {
                 </span>
               )}
             </div>
-            <p className="text-lg font-bold text-emerald-400 font-mono mt-0.5">{totalClosing}</p>
+            <p className="text-base sm:text-lg font-bold text-emerald-400 font-mono mt-0.5 truncate">{totalClosing}</p>
           </div>
-          <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl">
+          <div className="bg-slate-900 border border-slate-800 p-2.5 sm:p-3 rounded-xl">
             <span className="text-[10px] font-bold uppercase text-amber-400">Bottles Sold</span>
-            <p className="text-lg font-bold text-amber-400 font-mono mt-0.5">{totalSaleBottles}</p>
+            <p className="text-base sm:text-lg font-bold text-amber-400 font-mono mt-0.5 truncate">{totalSaleBottles}</p>
           </div>
-          <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl">
+          <div className="bg-slate-900 border border-slate-800 p-2.5 sm:p-3 rounded-xl">
             <span className="text-[10px] font-bold uppercase text-amber-300">Total Stock Value</span>
-            <p className="text-lg font-bold text-amber-300 font-mono mt-0.5">₹{totalStockValue.toFixed(2)}</p>
+            <p className="text-base sm:text-lg font-bold text-amber-300 font-mono mt-0.5 truncate" title={`₹${totalStockValue.toFixed(2)}`}>
+              ₹{totalStockValue.toFixed(2)}
+            </p>
           </div>
-          <div className="bg-slate-900 border border-amber-500/30 p-3 rounded-xl bg-gradient-to-br from-slate-900 to-amber-950/30">
+          <div className="bg-slate-900 border border-amber-500/30 p-2.5 sm:p-3 rounded-xl bg-gradient-to-br from-slate-900 to-amber-950/30 col-span-2 sm:col-span-1">
             <span className="text-[10px] font-bold uppercase text-emerald-400">Total Business</span>
-            <p className="text-lg font-bold text-emerald-400 font-mono mt-0.5">₹{totalBusinessAmount.toFixed(2)}</p>
+            <p className="text-base sm:text-lg font-bold text-emerald-400 font-mono mt-0.5 truncate" title={`₹${totalBusinessAmount.toFixed(2)}`}>
+              ₹{totalBusinessAmount.toFixed(2)}
+            </p>
           </div>
         </div>
 
-        {/* Action strip directly above stock table */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1">
+        {/* View Mode Switcher and Row Header Strip */}
+        <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2 px-1">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
               Stock Inventory ({items.length} row{items.length === 1 ? '' : 's'})
@@ -666,234 +677,383 @@ const DailyStock = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {!meta.isLocked && (
+            {/* View Mode Toggle: Auto / Cards / Table */}
+            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 text-xs">
               <button
-                onClick={handleOpenAddBrandModal}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold text-xs rounded-xl shadow-md shadow-emerald-950/20 transition-all"
-                title="Add New Brand & Configure Sizes"
+                onClick={() => setViewMode('cards')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition-colors ${
+                  viewMode === 'cards' || (viewMode === 'auto' && window.innerWidth < 768)
+                    ? 'bg-amber-600 text-white font-bold'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Switch to Mobile Card View"
               >
-                <Plus className="w-3.5 h-3.5" />
-                Add New Brand
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Cards</span>
               </button>
-            )}
+              <button
+                onClick={() => setViewMode('table')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition-colors ${
+                  viewMode === 'table' || (viewMode === 'auto' && window.innerWidth >= 768)
+                    ? 'bg-amber-600 text-white font-bold'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Switch to Full Table View"
+              >
+                <TableIcon className="w-3.5 h-3.5" />
+                <span>Table</span>
+              </button>
+            </div>
 
             <Link
               to="/brands"
-              className="flex items-center gap-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-xl border border-slate-700/60 transition-colors"
+              className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-xl border border-slate-700/60 transition-colors"
               title="Navigate to Brand Management page"
             >
-              Brand Management →
+              Brand Master →
             </Link>
           </div>
         </div>
 
-        {/* Tabular Daily Stock Sheet */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          {loading ? (
-            <div className="p-12 text-center text-slate-500 text-sm">Loading daily stock sheet...</div>
-          ) : items.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 text-sm space-y-3">
-              <Package className="w-10 h-10 mx-auto text-slate-600" />
-              <p>No brands or sizes configured for this shop.</p>
-              {!meta.isLocked && (
-                <button
-                  onClick={handleOpenAddBrandModal}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold text-xs rounded-xl shadow-lg shadow-emerald-950/20 transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Your First Brand
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-950 text-slate-400 uppercase text-[11px] font-bold border-b border-slate-800">
-                  <tr>
-                    <th className="px-3.5 py-3 text-center">S.No.</th>
-                    <th className="px-4 py-3">Brand Name</th>
-                    <th className="px-3 py-3 text-center">Size</th>
-                    <th className="px-3 py-3 text-center">Opening</th>
-                    <th className="px-3 py-3 text-center">Indent</th>
-                    <th className="px-3 py-3 text-center">Total</th>
-                    <th className="px-3 py-3 text-center">Closing</th>
-                    <th className="px-3 py-3 text-center text-amber-400">Sale</th>
-                    <th className="px-3.5 py-3 text-right">Rate</th>
-                    <th className="px-3.5 py-3 text-right text-amber-300">Stock Value (₹)</th>
-                    <th className="px-4 py-3 text-right text-emerald-400">Amount (₹)</th>
-                    <th className="px-3 py-3 text-right text-slate-400" title="Informational only; excluded from financial totals">
-                      Extra Amt*
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {items.map((row, idx) => {
-                    const isInitialRow = meta.isInitialSetup || row.isInitialOpening;
-                    const isPendingClosing = row.closingStock === '' || row.closingStock === null || row.closingStock === undefined;
+        {/* Data Presentation: Card View vs Table View */}
+        {loading ? (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-500 text-sm">
+            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-amber-500" />
+            Loading daily stock sheet...
+          </div>
+        ) : items.length === 0 ? (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-400 text-sm space-y-3">
+            <Package className="w-10 h-10 mx-auto text-slate-600" />
+            <p>No brands or sizes configured for this shop.</p>
+            {!meta.isLocked && (
+              <button
+                onClick={handleOpenAddBrandModal}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold text-xs rounded-xl shadow-lg shadow-emerald-950/20 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                Add Your First Brand
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* 1. Mobile Cards View (Visible on small screens or when forced) */}
+            <div className={`space-y-3 ${viewMode === 'table' ? 'hidden' : viewMode === 'cards' ? 'block' : 'block md:hidden'}`}>
+              {items.map((row, idx) => {
+                const isInitialRow = meta.isInitialSetup || row.isInitialOpening;
+                const isPendingClosing = row.closingStock === '' || row.closingStock === null || row.closingStock === undefined;
 
-                    return (
-                      <tr key={row.id || idx} className="hover:bg-slate-800/40 transition-colors">
-                        <td className="px-3.5 py-3 text-center font-bold text-slate-400">
-                          {row.brand?.serialNo || idx + 1}
-                        </td>
-                        <td className="px-4 py-3 font-sans font-bold text-white">
-                          <div className="flex items-center gap-1.5">
-                            <span>{row.brand?.name}</span>
-                            {isPendingClosing && !meta.isLocked && (
-                              <span className="text-[9px] bg-amber-950/70 text-amber-400 border border-amber-800/50 px-1.5 py-0.2 rounded font-sans font-semibold">
-                                Pending
-                              </span>
+                return (
+                  <div
+                    key={row.id || idx}
+                    className={`bg-slate-900 border rounded-2xl p-3.5 sm:p-4 space-y-3 shadow-lg transition-all ${
+                      row.closingError
+                        ? 'border-rose-600/70 bg-rose-950/10'
+                        : isPendingClosing
+                        ? 'border-amber-600/30'
+                        : 'border-slate-800'
+                    }`}
+                  >
+                    {/* Card Header: Brand, Size & Rate */}
+                    <div className="flex items-start justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-slate-400 bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800">
+                            #{row.brand?.serialNo || idx + 1}
+                          </span>
+                          <h3 className="font-bold text-white text-sm sm:text-base">{row.brand?.name}</h3>
+                          <span className="font-bold text-amber-400 bg-amber-950/60 border border-amber-800/40 px-2 py-0.5 rounded-lg text-xs">
+                            {row.size?.code}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Selling Rate: <strong className="text-slate-200">₹{row.bottleRate}</strong> / bottle
+                        </p>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 block">Sale Amount</span>
+                        <span className="text-base font-bold text-emerald-400 font-mono">
+                          ₹{parseFloat(row.saleAmount || 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Stock Calculation Grid */}
+                    <div className="grid grid-cols-3 gap-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 text-center font-mono">
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-slate-400 block font-sans">Opening</span>
+                        {isInitialRow && !meta.isLocked ? (
+                          <input
+                            type="number"
+                            min="0"
+                            value={row.openingStock}
+                            onChange={(e) => handleOpeningChange(idx, e.target.value)}
+                            placeholder="0"
+                            className="w-full bg-slate-900 border border-indigo-700/60 rounded-lg py-1 px-1 text-center text-indigo-300 font-bold text-sm focus:outline-none"
+                            aria-label="Initial Opening balance"
+                          />
+                        ) : (
+                          <span className="text-sm font-bold text-slate-300 block mt-1">{row.openingStock}</span>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-slate-400 block font-sans">Indent (+)</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={row.indentStock}
+                          onChange={(e) => handleIndentChange(idx, e.target.value)}
+                          disabled={meta.isLocked}
+                          placeholder="0"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg py-1 px-1 text-center text-white font-bold text-sm focus:outline-none focus:border-amber-500 disabled:opacity-50"
+                          aria-label="Indent stock"
+                        />
+                      </div>
+
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-slate-400 block font-sans">Total</span>
+                        <span className="text-sm font-bold text-white block mt-1">{row.totalStock}</span>
+                      </div>
+                    </div>
+
+                    {/* Closing Entry & Result Row */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-300 mb-1">
+                          Physical Closing Count *
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={row.closingStock}
+                          onChange={(e) => handleClosingChange(idx, e.target.value)}
+                          disabled={meta.isLocked}
+                          placeholder="Enter Closing Count"
+                          className={`w-full bg-slate-950 border rounded-xl py-2 px-3 text-center font-mono font-bold text-base focus:outline-none transition-all disabled:opacity-50 ${
+                            row.closingError
+                              ? 'border-rose-500 text-rose-400 bg-rose-950/20 focus:border-rose-400'
+                              : 'border-slate-700 text-emerald-400 focus:border-amber-500'
+                          }`}
+                        />
+                        {row.closingError && (
+                          <p className="text-[10px] text-rose-400 mt-1">{row.closingError}</p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/80">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-amber-400 block font-sans">Bottles Sold</span>
+                          <span className="text-base font-bold text-amber-400 font-mono">
+                            {isPendingClosing ? '—' : `${row.saleCount} btls`}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block font-sans">Stock Value</span>
+                          <span className="text-xs font-bold text-amber-300 font-mono">
+                            ₹{((parseInt(row.totalStock, 10) || 0) * (parseFloat(row.bottleRate) || 0)).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 2. Desktop Tabular View (Visible on tablet/desktop or when forced) */}
+            <div className={`bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl ${
+              viewMode === 'cards' ? 'hidden' : viewMode === 'table' ? 'block' : 'hidden md:block'
+            }`}>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300 min-w-[840px]">
+                  <thead className="bg-slate-950 text-slate-400 uppercase text-[11px] font-bold border-b border-slate-800 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-3.5 py-3 text-center">S.No.</th>
+                      <th className="px-4 py-3">Brand Name</th>
+                      <th className="px-3 py-3 text-center">Size</th>
+                      <th className="px-3 py-3 text-center">Opening</th>
+                      <th className="px-3 py-3 text-center">Indent</th>
+                      <th className="px-3 py-3 text-center">Total</th>
+                      <th className="px-3 py-3 text-center">Closing</th>
+                      <th className="px-3 py-3 text-center text-amber-400">Sale</th>
+                      <th className="px-3.5 py-3 text-right">Rate</th>
+                      <th className="px-3.5 py-3 text-right text-amber-300">Stock Value (₹)</th>
+                      <th className="px-4 py-3 text-right text-emerald-400">Amount (₹)</th>
+                      <th className="px-3 py-3 text-right text-slate-400" title="Informational only; excluded from financial totals">
+                        Extra Amt*
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 font-mono">
+                    {items.map((row, idx) => {
+                      const isInitialRow = meta.isInitialSetup || row.isInitialOpening;
+                      const isPendingClosing = row.closingStock === '' || row.closingStock === null || row.closingStock === undefined;
+
+                      return (
+                        <tr key={row.id || idx} className="hover:bg-slate-800/40 transition-colors">
+                          <td className="px-3.5 py-3 text-center font-bold text-slate-400">
+                            {row.brand?.serialNo || idx + 1}
+                          </td>
+                          <td className="px-4 py-3 font-sans font-bold text-white">
+                            <div className="flex items-center gap-1.5">
+                              <span>{row.brand?.name}</span>
+                              {isPendingClosing && !meta.isLocked && (
+                                <span className="text-[9px] bg-amber-950/70 text-amber-400 border border-amber-800/50 px-1.5 py-0.2 rounded font-sans font-semibold">
+                                  Pending
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-center font-bold text-amber-400">
+                            {row.size?.code}
+                          </td>
+                          <td className="px-3 py-2 text-center text-slate-300">
+                            {isInitialRow && !meta.isLocked ? (
+                              <input
+                                type="number"
+                                min="0"
+                                value={row.openingStock}
+                                onChange={(e) => handleOpeningChange(idx, e.target.value)}
+                                placeholder="0"
+                                className="w-16 bg-slate-950 border border-indigo-700/60 rounded-lg py-1 px-1.5 text-center text-indigo-300 focus:outline-none focus:border-indigo-400 font-bold"
+                                title="Enter initial opening balance"
+                              />
+                            ) : (
+                              <span>{row.openingStock}</span>
                             )}
-                          </div>
-                        </td>
-                        <td className="px-3 py-3 text-center font-bold text-amber-400">
-                          {row.size?.code}
-                        </td>
-                        <td className="px-3 py-2 text-center text-slate-300">
-                          {isInitialRow && !meta.isLocked ? (
+                          </td>
+                          <td className="px-3 py-2 text-center">
                             <input
                               type="number"
                               min="0"
-                              value={row.openingStock}
-                              onChange={(e) => handleOpeningChange(idx, e.target.value)}
-                              placeholder="0"
-                              className="w-16 bg-slate-950 border border-indigo-700/60 rounded-lg py-1 px-1.5 text-center text-indigo-300 focus:outline-none focus:border-indigo-400 font-bold"
-                              title="Enter initial opening balance"
+                              value={row.indentStock}
+                              onChange={(e) => handleIndentChange(idx, e.target.value)}
+                              disabled={meta.isLocked}
+                              className="w-16 bg-slate-950 border border-slate-800 rounded-lg py-1 px-1.5 text-center text-white focus:outline-none focus:border-amber-500 font-bold disabled:opacity-50"
                             />
-                          ) : (
-                            <span>{row.openingStock}</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <input
-                            type="number"
-                            min="0"
-                            value={row.indentStock}
-                            onChange={(e) => handleIndentChange(idx, e.target.value)}
-                            disabled={meta.isLocked}
-                            className="w-16 bg-slate-950 border border-slate-800 rounded-lg py-1 px-1.5 text-center text-white focus:outline-none focus:border-amber-500 font-bold disabled:opacity-50"
-                          />
-                        </td>
-                        <td className="px-3 py-3 text-center font-bold text-white">
-                          {row.totalStock}
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <input
-                            type="number"
-                            min="0"
-                            value={row.closingStock}
-                            onChange={(e) => handleClosingChange(idx, e.target.value)}
-                            disabled={meta.isLocked}
-                            placeholder="Count"
-                            className={`w-16 bg-slate-950 border rounded-lg py-1 px-1.5 text-center font-bold focus:outline-none disabled:opacity-50 ${
-                              row.closingError
-                                ? 'border-rose-500 text-rose-400 bg-rose-950/20 focus:border-rose-400'
-                                : 'border-slate-800 text-emerald-400 focus:border-amber-500'
-                            }`}
-                          />
-                          {row.closingError && (
-                            <div className="text-[9px] text-rose-400 font-sans mt-0.5 whitespace-nowrap">
-                              {row.closingError}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-3 py-3 text-center font-bold text-amber-400">
-                          {isPendingClosing ? '—' : row.saleCount}
-                        </td>
-                        <td className="px-3.5 py-3 text-right text-slate-400">
-                          ₹{row.bottleRate}
-                        </td>
-                        <td className="px-3.5 py-3 text-right font-bold text-amber-300 font-sans">
-                          ₹{((parseInt(row.totalStock, 10) || 0) * (parseFloat(row.bottleRate) || 0)).toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3 text-right font-bold text-emerald-400 font-sans">
-                          ₹{parseFloat(row.saleAmount || 0).toFixed(2)}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={row.extraAmount}
-                            onChange={(e) => handleExtraAmountChange(idx, e.target.value)}
-                            disabled={meta.isLocked}
-                            placeholder="0.00"
-                            className="w-20 bg-slate-950 border border-slate-800 rounded-lg py-1 px-1.5 text-right text-slate-400 focus:outline-none focus:border-amber-500 text-xs disabled:opacity-50"
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                {/* Table Footer Totals */}
-                <tfoot className="bg-slate-950 text-slate-200 font-bold border-t-2 border-slate-800 font-mono">
-                  <tr>
-                    <td colSpan={3} className="px-4 py-3 font-sans text-xs uppercase text-amber-400 font-bold">
-                      Daily Totals:
-                    </td>
-                    <td className="px-3 py-3 text-center text-slate-300">{totalOpening}</td>
-                    <td className="px-3 py-3 text-center text-indigo-400">{totalIndent}</td>
-                    <td className="px-3 py-3 text-center text-white">{totalStockCount}</td>
-                    <td className="px-3 py-3 text-center text-emerald-400">{totalClosing}</td>
-                    <td className="px-3 py-3 text-center text-amber-400 text-sm font-extrabold">{totalSaleBottles}</td>
-                    <td className="px-3.5 py-3 text-right text-slate-400">—</td>
-                    <td className="px-3.5 py-3 text-right text-amber-300 text-sm font-extrabold font-sans">
-                      ₹{totalStockValue.toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3 text-right text-emerald-400 text-sm font-extrabold font-sans">
-                      ₹{totalBusinessAmount.toFixed(2)}
-                    </td>
-                    <td className="px-3 py-3 text-right text-slate-400 text-xs font-sans">
-                      ₹{totalExtraAmount.toFixed(2)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+                          </td>
+                          <td className="px-3 py-3 text-center font-bold text-white">
+                            {row.totalStock}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <input
+                              type="number"
+                              min="0"
+                              value={row.closingStock}
+                              onChange={(e) => handleClosingChange(idx, e.target.value)}
+                              disabled={meta.isLocked}
+                              placeholder="Count"
+                              className={`w-16 bg-slate-950 border rounded-lg py-1 px-1.5 text-center font-bold focus:outline-none disabled:opacity-50 ${
+                                row.closingError
+                                  ? 'border-rose-500 text-rose-400 bg-rose-950/20 focus:border-rose-400'
+                                  : 'border-slate-800 text-emerald-400 focus:border-amber-500'
+                              }`}
+                            />
+                            {row.closingError && (
+                              <div className="text-[9px] text-rose-400 font-sans mt-0.5 whitespace-nowrap">
+                                {row.closingError}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-center font-bold text-amber-400">
+                            {isPendingClosing ? '—' : row.saleCount}
+                          </td>
+                          <td className="px-3.5 py-3 text-right text-slate-400">
+                            ₹{row.bottleRate}
+                          </td>
+                          <td className="px-3.5 py-3 text-right font-bold text-amber-300 font-sans">
+                            ₹{((parseInt(row.totalStock, 10) || 0) * (parseFloat(row.bottleRate) || 0)).toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-emerald-400 font-sans">
+                            ₹{parseFloat(row.saleAmount || 0).toFixed(2)}
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={row.extraAmount}
+                              onChange={(e) => handleExtraAmountChange(idx, e.target.value)}
+                              disabled={meta.isLocked}
+                              placeholder="0.00"
+                              className="w-20 bg-slate-950 border border-slate-800 rounded-lg py-1 px-1.5 text-right text-slate-400 focus:outline-none focus:border-amber-500 text-xs disabled:opacity-50"
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  {/* Table Footer Totals */}
+                  <tfoot className="bg-slate-950 text-slate-200 font-bold border-t-2 border-slate-800 font-mono">
+                    <tr>
+                      <td colSpan={3} className="px-4 py-3 font-sans text-xs uppercase text-amber-400 font-bold">
+                        Daily Totals:
+                      </td>
+                      <td className="px-3 py-3 text-center text-slate-300">{totalOpening}</td>
+                      <td className="px-3 py-3 text-center text-indigo-400">{totalIndent}</td>
+                      <td className="px-3 py-3 text-center text-white">{totalStockCount}</td>
+                      <td className="px-3 py-3 text-center text-emerald-400">{totalClosing}</td>
+                      <td className="px-3 py-3 text-center text-amber-400 text-sm font-extrabold">{totalSaleBottles}</td>
+                      <td className="px-3.5 py-3 text-right text-slate-400">—</td>
+                      <td className="px-3.5 py-3 text-right text-amber-300 text-sm font-extrabold font-sans">
+                        ₹{totalStockValue.toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-right text-emerald-400 text-sm font-extrabold font-sans">
+                        ₹{totalBusinessAmount.toFixed(2)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-slate-400 text-xs font-sans">
+                        ₹{totalExtraAmount.toFixed(2)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
-          )}
-        </div>
+          </>
+        )}
 
         {/* Footer Navigation & Closing Prompt */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-slate-900 border border-slate-800">
-          <p className="text-xs text-slate-400">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 sm:p-4 rounded-xl bg-slate-900 border border-slate-800">
+          <p className="text-[11px] sm:text-xs text-slate-400">
             * <strong className="text-slate-300">Extra Amount:</strong> Strictly informational field. 100% excluded from all financial and sales amount calculations.
           </p>
-          <div className="flex items-center gap-3">
-            <Link
-              to="/dashboard"
-              className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs rounded-xl transition-colors"
-            >
-              Go to Dashboard & Close Business
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs rounded-xl transition-colors shrink-0"
+          >
+            Go to Dashboard & Close Business
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
       </div>
 
       {/* Add New Brand & Sizes Modal */}
       {showAddBrandModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-emerald-950/60 border border-emerald-800/60 rounded-xl text-emerald-400">
                   <Plus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Add New Brand & Sizes</h3>
+                  <h3 className="text-base sm:text-lg font-bold text-white">Add New Brand & Sizes</h3>
                   <p className="text-xs text-slate-400">Configure brand details and selling rates</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowAddBrandModal(false)}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                aria-label="Close modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {modalError && (
-              <div className="p-3.5 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs flex items-center gap-2">
+              <div className="p-3 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
                 <span>{modalError}</span>
               </div>
@@ -945,7 +1105,7 @@ const DailyStock = () => {
                     value={newBrandDescription}
                     onChange={(e) => setNewBrandDescription(e.target.value)}
                     placeholder="e.g. Premium blended whiskey"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-emerald-500 placeholder-slate-600 text-xs"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-white text-xs focus:outline-none focus:border-emerald-500 placeholder-slate-600"
                   />
                 </div>
 
@@ -967,7 +1127,7 @@ const DailyStock = () => {
                 <div className="space-y-2 pt-2 border-t border-slate-800">
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-semibold text-slate-300 uppercase">
-                      Applicable Sizes & Selling Rates (₹) *
+                      Applicable Sizes & Rates (₹) *
                     </label>
                     <span className="text-[11px] text-slate-400">Select applicable sizes</span>
                   </div>
@@ -978,7 +1138,7 @@ const DailyStock = () => {
                       return (
                         <div
                           key={sz.id}
-                          className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                          className={`p-2.5 sm:p-3 rounded-xl border transition-all flex items-center justify-between gap-2 sm:gap-3 ${
                             cfg.selected
                               ? 'bg-slate-950/80 border-emerald-700/60 shadow-sm'
                               : 'bg-slate-950/30 border-slate-800/80 opacity-60'
@@ -1010,13 +1170,13 @@ const DailyStock = () => {
                               value={cfg.rate}
                               onChange={(e) => handleRateChange(sz.id, e.target.value)}
                               placeholder="Rate"
-                              className={`w-28 bg-slate-900 border rounded-lg py-1.5 px-2.5 text-right font-mono text-sm focus:outline-none transition-all ${
+                              className={`w-24 sm:w-28 bg-slate-900 border rounded-lg py-1.5 px-2 text-right font-mono text-sm focus:outline-none transition-all ${
                                 cfg.selected
                                   ? 'border-emerald-600/70 text-emerald-300 focus:border-emerald-400'
                                   : 'border-slate-800 text-slate-600 opacity-40'
                               }`}
                             />
-                            <span className="text-[11px] text-slate-500">/ btl</span>
+                            <span className="text-[11px] text-slate-500 hidden xs:inline">/ btl</span>
                           </div>
                         </div>
                       );
@@ -1043,7 +1203,7 @@ const DailyStock = () => {
                         onChange={() => setNewBrandRateScope('global')}
                         className="text-amber-500"
                       />
-                      <span>All Shops (Global)</span>
+                      <span className="truncate">All Shops (Global)</span>
                     </label>
 
                     <label className={`p-2.5 rounded-xl border cursor-pointer select-none transition-all flex items-center gap-2 ${
@@ -1065,35 +1225,35 @@ const DailyStock = () => {
                 </div>
 
                 {/* Modal Footer */}
-                <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+                <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-2 pt-4 border-t border-slate-800">
                   <Link
                     to="/brands"
                     className="text-xs text-slate-400 hover:text-amber-400 transition-colors flex items-center gap-1"
                   >
                     Brand Master →
                   </Link>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 w-full sm:w-auto justify-end">
                     <button
                       type="button"
                       onClick={() => setShowAddBrandModal(false)}
-                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-xl transition-colors"
+                      className="flex-1 sm:flex-initial px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-xl transition-colors text-center"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={modalSubmitting}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold rounded-xl shadow-lg shadow-emerald-950/30 disabled:opacity-50 transition-all"
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold rounded-xl shadow-lg shadow-emerald-950/30 disabled:opacity-50 transition-all"
                     >
                       {modalSubmitting ? (
                         <>
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          Saving Brand...
+                          Saving...
                         </>
                       ) : (
                         <>
                           <Plus className="w-3.5 h-3.5" />
-                          Save Brand & Sizes
+                          Save Brand & Rates
                         </>
                       )}
                     </button>
