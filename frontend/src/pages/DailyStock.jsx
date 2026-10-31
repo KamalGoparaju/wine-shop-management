@@ -18,6 +18,7 @@ import {
   FileSpreadsheet,
   Plus,
   X,
+  LayoutGrid,
   Table as TableIcon,
   UploadCloud
 } from 'lucide-react';
