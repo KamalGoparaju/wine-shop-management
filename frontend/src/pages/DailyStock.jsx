@@ -18,12 +18,13 @@ import {
   FileSpreadsheet,
   Plus,
   X,
-  LayoutGrid,
-  Table as TableIcon
+  Table as TableIcon,
+  UploadCloud
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { downloadAuthenticatedFile } from '../utils/download';
 import { useTheme } from '../context/ThemeContext';
+import DailyStockImportModal from '../components/stock/DailyStockImportModal';
 
 const DailyStock = () => {
   const { selectedShop } = useAuth();
@@ -32,6 +33,7 @@ const DailyStock = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportingCsv, setExportingCsv] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
@@ -541,6 +543,15 @@ const DailyStock = () => {
             {/* Primary Action Buttons */}
             {!meta.isLocked && (
               <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all"
+                  title="Import Stock Sheet from Image, PDF, Excel, or CSV with Mandatory Preview"
+                >
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  <span>Import Sheet</span>
+                </button>
+
                 <button
                   onClick={handleOpenAddBrandModal}
                   className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all"
@@ -1293,6 +1304,21 @@ const DailyStock = () => {
           </div>
         </div>
       )}
+
+      {/* Mandatory Preview Before Save Daily Stock Import Modal */}
+      <DailyStockImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        selectedShop={selectedShop}
+        defaultDate={businessDate}
+        activeTheme={activeTheme}
+        onImportSuccess={(data) => {
+          setSuccessMsg(
+            `Stock import successful! ${data.importedCount} record(s) verified and recorded for ${data.businessDate}. Total bottles sold: ${data.totalBottlesSold}, Total sales: ₹${data.totalSaleAmount}.`
+          );
+          fetchDailySheet(businessDate);
+        }}
+      />
     </Layout>
   );
 };
