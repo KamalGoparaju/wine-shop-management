@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import apiClient from '../../api/client';
+import Pagination from '../Pagination';
 import {
   UploadCloud,
   FileSpreadsheet,
@@ -44,9 +45,11 @@ const DailyStockImportModal = ({
   const [masterSizes, setMasterSizes] = useState([]);
   const [existingRecordCount, setExistingRecordCount] = useState(0);
 
-  // Filter & Search in Preview
+  // Filter, Search & Pagination in Preview
   const [filterStatus, setFilterStatus] = useState('ALL'); // 'ALL' | 'NEEDS_REVIEW' | 'INVALID' | 'VERIFIED'
   const [searchBrand, setSearchBrand] = useState('');
+  const [modalPage, setModalPage] = useState(1);
+  const [modalLimit, setModalLimit] = useState(25);
 
   // Confirmation Step State
   const [importMode, setImportMode] = useState('merge'); // 'merge' | 'replace' | 'append_only'
@@ -271,6 +274,24 @@ const DailyStockImportModal = ({
       return true;
     });
   }, [stagedRows, filterStatus, searchBrand]);
+
+  const paginatedRows = useMemo(() => {
+    const start = (modalPage - 1) * modalLimit;
+    return filteredRows.slice(start, start + modalLimit);
+  }, [filteredRows, modalPage, modalLimit]);
+
+  const modalPaginationMeta = useMemo(() => {
+    const totalRecords = filteredRows.length;
+    const totalPages = Math.max(1, Math.ceil(totalRecords / modalLimit));
+    return {
+      page: modalPage,
+      limit: modalLimit,
+      totalRecords,
+      totalPages,
+      hasNextPage: modalPage < totalPages,
+      hasPreviousPage: modalPage > 1
+    };
+  }, [filteredRows.length, modalPage, modalLimit]);
 
   // Step 2 -> Step 3: Advance to Final Confirmation
   const handleProceedToConfirmation = () => {
@@ -546,7 +567,7 @@ const DailyStockImportModal = ({
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => setFilterStatus('ALL')}
+                      onClick={() => { setFilterStatus('ALL'); setModalPage(1); }}
                       className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
                         filterStatus === 'ALL'
                           ? 'bg-slate-800 text-white shadow-xs'
@@ -557,7 +578,7 @@ const DailyStockImportModal = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFilterStatus('NEEDS_REVIEW')}
+                      onClick={() => { setFilterStatus('NEEDS_REVIEW'); setModalPage(1); }}
                       className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
                         filterStatus === 'NEEDS_REVIEW'
                           ? 'bg-amber-600 text-white shadow-xs'
@@ -568,7 +589,7 @@ const DailyStockImportModal = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFilterStatus('INVALID')}
+                      onClick={() => { setFilterStatus('INVALID'); setModalPage(1); }}
                       className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
                         filterStatus === 'INVALID'
                           ? 'bg-rose-600 text-white shadow-xs'
@@ -579,7 +600,7 @@ const DailyStockImportModal = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFilterStatus('VERIFIED')}
+                      onClick={() => { setFilterStatus('VERIFIED'); setModalPage(1); }}
                       className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
                         filterStatus === 'VERIFIED'
                           ? 'bg-emerald-600 text-white shadow-xs'
@@ -597,7 +618,7 @@ const DailyStockImportModal = ({
                       <input
                         type="text"
                         value={searchBrand}
-                        onChange={(e) => setSearchBrand(e.target.value)}
+                        onChange={(e) => { setSearchBrand(e.target.value); setModalPage(1); }}
                         placeholder="Search brand/size..."
                         className="pl-8 pr-2.5 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 w-36 sm:w-44"
                       />
@@ -636,14 +657,14 @@ const DailyStockImportModal = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredRows.length === 0 ? (
+                      {paginatedRows.length === 0 ? (
                         <tr>
                           <td colSpan={14} className="text-center py-6 text-slate-400 italic">
                             No records match the current filter.
                           </td>
                         </tr>
                       ) : (
-                        filteredRows.map((row, idx) => {
+                        paginatedRows.map((row, idx) => {
                           const isInvalid = row.status === 'INVALID';
                           const needsReview = row.status === 'NEEDS_REVIEW' || row.status === 'BRAND_NOT_FOUND' || row.status === 'SIZE_NOT_FOUND';
 
@@ -655,7 +676,7 @@ const DailyStockImportModal = ({
                               }`}
                             >
                               <td className="text-center text-slate-400 font-mono text-[11px]">
-                                {idx + 1}
+                                {(modalPage - 1) * modalLimit + idx + 1}
                               </td>
 
                               {/* Brand Selector */}
@@ -823,6 +844,17 @@ const DailyStockImportModal = ({
                     </tbody>
                   </table>
                 </div>
+
+                {/* Staged Rows Pagination */}
+                {modalPaginationMeta.totalRecords > 0 && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-1.5 shadow-xs">
+                    <Pagination
+                      pagination={modalPaginationMeta}
+                      onPageChange={setModalPage}
+                      onLimitChange={(l) => { setModalLimit(l); setModalPage(1); }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}

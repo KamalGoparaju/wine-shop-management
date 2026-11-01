@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
 import apiClient from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +18,7 @@ import {
   FileSpreadsheet,
   Plus,
   X,
+  Search,
   LayoutGrid,
   Table as TableIcon,
   UploadCloud
@@ -25,6 +26,8 @@ import {
 import { Link } from 'react-router-dom';
 import { downloadAuthenticatedFile } from '../utils/download';
 import { useTheme } from '../context/ThemeContext';
+import Pagination from '../components/Pagination';
+import usePagination from '../hooks/usePagination';
 import DailyStockImportModal from '../components/stock/DailyStockImportModal';
 import ErrorBoundary from '../components/ErrorBoundary';
 
@@ -42,6 +45,25 @@ const DailyStock = () => {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [meta, setMeta] = useState({});
+
+  // Pagination & Search
+  const {
+    page,
+    limit,
+    search,
+    debouncedSearch,
+    setPage,
+    setLimit,
+    setSearch,
+    pagination,
+    setPaginationMetadata,
+    getNextRequestId,
+    isCurrentRequest
+  } = usePagination({ initialPage: 1, initialLimit: 25 });
+
+  // Staged edits preserved across page transitions
+  const [stagedEdits, setStagedEdits] = useState({});
+  const [backendSummary, setBackendSummary] = useState(null);
 
   // Mobile View Mode: 'cards' or 'table'
   const [viewMode, setViewMode] = useState('auto'); // 'auto' (cards on mobile, table on desktop), 'cards', 'table'
@@ -116,21 +138,75 @@ const DailyStock = () => {
     }
   };
 
-  const fetchDailySheet = async (date) => {
+  const applyStagedEdits = (rawRecords, stagedMap) => {
+    return (rawRecords || []).map((row) => {
+      const key = `${row.brandId}_${row.sizeId}`;
+      if (stagedMap && stagedMap[key]) {
+        const staged = stagedMap[key];
+        const op = staged.openingStock !== undefined ? staged.openingStock : row.openingStock;
+        const ind = staged.indentStock !== undefined ? staged.indentStock : row.indentStock;
+        const opNum = op === '' ? 0 : (parseInt(op, 10) || 0);
+        const indNum = ind === '' ? 0 : (parseInt(ind, 10) || 0);
+        const total = opNum + indNum;
+        const hasClosing = staged.closingStock !== '' && staged.closingStock !== null && staged.closingStock !== undefined;
+        const clNum = hasClosing ? (parseInt(staged.closingStock, 10) || 0) : 0;
+        const sale = hasClosing ? Math.max(0, total - clNum) : 0;
+        const rate = parseFloat(row.bottleRate) || 0;
+        const stockValue = total * rate;
+        const saleAmount = hasClosing ? sale * rate : 0;
+
+        return {
+          ...row,
+          openingStock: op,
+          indentStock: ind,
+          totalStock: total,
+          closingStock: staged.closingStock,
+          stockValue,
+          saleCount: sale,
+          saleAmount,
+          extraAmount: staged.extraAmount !== undefined ? staged.extraAmount : row.extraAmount,
+          closingError: hasClosing && clNum > total ? `Closing (${clNum}) exceeds Total (${total})` : null
+        };
+      }
+      return row;
+    });
+  };
+
+  const fetchDailySheet = async (
+    targetDate = businessDate,
+    targetPage = page,
+    targetLimit = limit,
+    targetSearch = debouncedSearch
+  ) => {
     if (!selectedShop?.id) return;
     const currentShopId = selectedShop.id;
+    const reqId = getNextRequestId();
     setLoading(true);
     setError('');
-    setSuccessMsg('');
 
     try {
       const res = await apiClient.get('/inventory/daily-stock', {
-        params: { date, shopId: currentShopId },
+        params: {
+          date: targetDate,
+          shopId: currentShopId,
+          page: targetPage,
+          limit: targetLimit,
+          search: targetSearch
+        },
         headers: { 'x-shop-id': currentShopId }
       });
 
+      if (!isCurrentRequest(reqId)) return;
+
       if (res.success && res.data.shopId === currentShopId) {
-        setItems(res.data.records || []);
+        const mergedRecords = applyStagedEdits(res.data.records || [], stagedEdits);
+        setItems(mergedRecords);
+        if (res.data.summary) {
+          setBackendSummary(res.data.summary);
+        }
+        if (res.data.pagination) {
+          setPaginationMetadata(res.data.pagination);
+        }
         setMeta({
           isNewDay: res.data.isNewDay,
           isInitialSetup: res.data.isInitialSetup,
@@ -142,11 +218,21 @@ const DailyStock = () => {
         });
       }
     } catch (err) {
-      setError(err?.message || 'Failed to load daily stock sheet.');
+      if (isCurrentRequest(reqId)) {
+        setError(err?.message || 'Failed to load daily stock sheet.');
+      }
     } finally {
-      setLoading(false);
+      if (isCurrentRequest(reqId)) {
+        setLoading(false);
+      }
     }
   };
+
+  // Reset staged edits and reset page to 1 when active shop or business date changes
+  useEffect(() => {
+    setStagedEdits({});
+    setPage(1);
+  }, [businessDate, selectedShop?.id]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -154,19 +240,33 @@ const DailyStock = () => {
 
     if (!currentShopId) return;
 
-    setItems([]);
     setLoading(true);
     setError('');
     setSuccessMsg('');
 
+    const reqId = getNextRequestId();
+
     apiClient.get('/inventory/daily-stock', {
-      params: { date: businessDate, shopId: currentShopId },
+      params: {
+        date: businessDate,
+        shopId: currentShopId,
+        page,
+        limit,
+        search: debouncedSearch
+      },
       headers: { 'x-shop-id': currentShopId }
     })
       .then((res) => {
-        if (!isCurrent) return;
+        if (!isCurrent || !isCurrentRequest(reqId)) return;
         if (res.success && res.data.shopId === currentShopId) {
-          setItems(res.data.records || []);
+          const mergedRecords = applyStagedEdits(res.data.records || [], stagedEdits);
+          setItems(mergedRecords);
+          if (res.data.summary) {
+            setBackendSummary(res.data.summary);
+          }
+          if (res.data.pagination) {
+            setPaginationMetadata(res.data.pagination);
+          }
           setMeta({
             isNewDay: res.data.isNewDay,
             isInitialSetup: res.data.isInitialSetup,
@@ -179,33 +279,34 @@ const DailyStock = () => {
         }
       })
       .catch((err) => {
-        if (!isCurrent) return;
+        if (!isCurrent || !isCurrentRequest(reqId)) return;
         setError(err?.message || 'Failed to load daily stock sheet.');
       })
       .finally(() => {
-        if (isCurrent) setLoading(false);
+        if (isCurrent && isCurrentRequest(reqId)) setLoading(false);
       });
 
     return () => {
       isCurrent = false;
     };
-  }, [businessDate, selectedShop?.id]);
+  }, [businessDate, selectedShop?.id, page, limit, debouncedSearch]);
 
   const handleOpeningChange = (index, val) => {
     const nextItems = [...items];
+    const row = nextItems[index];
     const opening = val === '' ? '' : Math.max(0, parseInt(val, 10) || 0);
     const opNum = val === '' ? 0 : opening;
-    const indNum = parseInt(nextItems[index].indentStock, 10) || 0;
+    const indNum = parseInt(row.indentStock, 10) || 0;
     const total = opNum + indNum;
-    const hasClosing = nextItems[index].closingStock !== '' && nextItems[index].closingStock !== null && nextItems[index].closingStock !== undefined;
-    const clNum = hasClosing ? parseInt(nextItems[index].closingStock, 10) || 0 : 0;
+    const hasClosing = row.closingStock !== '' && row.closingStock !== null && row.closingStock !== undefined;
+    const clNum = hasClosing ? parseInt(row.closingStock, 10) || 0 : 0;
     const sale = hasClosing ? Math.max(0, total - clNum) : 0;
-    const rate = parseFloat(nextItems[index].bottleRate) || 0;
+    const rate = parseFloat(row.bottleRate) || 0;
     const stockValue = total * rate;
     const saleAmount = hasClosing ? sale * rate : 0;
 
     nextItems[index] = {
-      ...nextItems[index],
+      ...row,
       openingStock: opening,
       totalStock: total,
       stockValue,
@@ -214,23 +315,40 @@ const DailyStock = () => {
       closingError: hasClosing && clNum > total ? `Closing (${clNum}) exceeds Total (${total})` : null
     };
     setItems(nextItems);
+
+    const key = `${row.brandId}_${row.sizeId}`;
+    setStagedEdits(prev => ({
+      ...prev,
+      [key]: {
+        ...(prev[key] || {}),
+        brandId: row.brandId,
+        sizeId: row.sizeId,
+        bottleRate: row.bottleRate,
+        notes: row.notes,
+        openingStock: opening,
+        indentStock: row.indentStock,
+        closingStock: row.closingStock,
+        extraAmount: row.extraAmount
+      }
+    }));
   };
 
   const handleIndentChange = (index, val) => {
     const nextItems = [...items];
+    const row = nextItems[index];
     const indent = val === '' ? '' : Math.max(0, parseInt(val, 10) || 0);
     const indNum = val === '' ? 0 : indent;
-    const opNum = parseInt(nextItems[index].openingStock, 10) || 0;
+    const opNum = parseInt(row.openingStock, 10) || 0;
     const total = opNum + indNum;
-    const hasClosing = nextItems[index].closingStock !== '' && nextItems[index].closingStock !== null && nextItems[index].closingStock !== undefined;
-    const clNum = hasClosing ? parseInt(nextItems[index].closingStock, 10) || 0 : 0;
+    const hasClosing = row.closingStock !== '' && row.closingStock !== null && row.closingStock !== undefined;
+    const clNum = hasClosing ? parseInt(row.closingStock, 10) || 0 : 0;
     const sale = hasClosing ? Math.max(0, total - clNum) : 0;
-    const rate = parseFloat(nextItems[index].bottleRate) || 0;
+    const rate = parseFloat(row.bottleRate) || 0;
     const stockValue = total * rate;
     const saleAmount = hasClosing ? sale * rate : 0;
 
     nextItems[index] = {
-      ...nextItems[index],
+      ...row,
       indentStock: indent,
       totalStock: total,
       stockValue,
@@ -239,35 +357,85 @@ const DailyStock = () => {
       closingError: hasClosing && clNum > total ? `Closing (${clNum}) exceeds Total (${total})` : null
     };
     setItems(nextItems);
+
+    const key = `${row.brandId}_${row.sizeId}`;
+    setStagedEdits(prev => ({
+      ...prev,
+      [key]: {
+        ...(prev[key] || {}),
+        brandId: row.brandId,
+        sizeId: row.sizeId,
+        bottleRate: row.bottleRate,
+        notes: row.notes,
+        openingStock: row.openingStock,
+        indentStock: indent,
+        closingStock: row.closingStock,
+        extraAmount: row.extraAmount
+      }
+    }));
   };
 
   const handleClosingChange = (index, val) => {
     const nextItems = [...items];
-    const total = nextItems[index].totalStock;
+    const row = nextItems[index];
+    const total = row.totalStock;
     const hasVal = val !== '';
     const closing = hasVal ? Math.max(0, parseInt(val, 10) || 0) : '';
     const clNum = hasVal ? closing : 0;
     const sale = hasVal ? Math.max(0, total - clNum) : 0;
-    const rate = parseFloat(nextItems[index].bottleRate) || 0;
+    const rate = parseFloat(row.bottleRate) || 0;
     const saleAmount = hasVal ? sale * rate : 0;
 
     nextItems[index] = {
-      ...nextItems[index],
+      ...row,
       closingStock: closing,
       saleCount: sale,
       saleAmount,
       closingError: hasVal && clNum > total ? `Closing (${clNum}) exceeds Total (${total})` : null
     };
     setItems(nextItems);
+
+    const key = `${row.brandId}_${row.sizeId}`;
+    setStagedEdits(prev => ({
+      ...prev,
+      [key]: {
+        ...(prev[key] || {}),
+        brandId: row.brandId,
+        sizeId: row.sizeId,
+        bottleRate: row.bottleRate,
+        notes: row.notes,
+        openingStock: row.openingStock,
+        indentStock: row.indentStock,
+        closingStock: closing,
+        extraAmount: row.extraAmount
+      }
+    }));
   };
 
   const handleExtraAmountChange = (index, val) => {
     const nextItems = [...items];
+    const row = nextItems[index];
     nextItems[index] = {
-      ...nextItems[index],
+      ...row,
       extraAmount: val
     };
     setItems(nextItems);
+
+    const key = `${row.brandId}_${row.sizeId}`;
+    setStagedEdits(prev => ({
+      ...prev,
+      [key]: {
+        ...(prev[key] || {}),
+        brandId: row.brandId,
+        sizeId: row.sizeId,
+        bottleRate: row.bottleRate,
+        notes: row.notes,
+        openingStock: row.openingStock,
+        indentStock: row.indentStock,
+        closingStock: row.closingStock,
+        extraAmount: val
+      }
+    }));
   };
 
   const incompleteCount = items.filter(
@@ -283,40 +451,67 @@ const DailyStock = () => {
     setSuccessMsg('');
 
     if (invalidRowsCount > 0) {
-      setError(`Cannot save: ${invalidRowsCount} brand row(s) have closing count exceeding total stock.`);
+      setError(`Cannot save: ${invalidRowsCount} brand row(s) on current page have closing count exceeding total stock.`);
       return;
     }
 
     if (status === 'COMPLETED' && incompleteCount > 0) {
-      setError(`Cannot finalize: ${incompleteCount} brand row(s) are pending physical closing counts. Please enter closing counts for all rows or save as Draft.`);
+      setError(`Cannot finalize: ${incompleteCount} brand row(s) on this page are pending physical closing counts. Please enter closing counts for all rows or save as Draft.`);
       return;
     }
 
     setSaving(true);
 
     try {
+      const itemsMap = new Map();
+
+      // 1. Add all staged edits across any pages
+      Object.values(stagedEdits).forEach(staged => {
+        const key = `${staged.brandId}_${staged.sizeId}`;
+        const op = parseInt(staged.openingStock, 10) || 0;
+        const ind = parseInt(staged.indentStock, 10) || 0;
+        const tot = op + ind;
+        const hasCl = staged.closingStock !== '' && staged.closingStock !== null && staged.closingStock !== undefined;
+        const cl = hasCl ? parseInt(staged.closingStock, 10) : 0;
+        itemsMap.set(key, {
+          brandId: staged.brandId,
+          sizeId: staged.sizeId,
+          openingStock: op,
+          indentStock: ind,
+          totalStock: tot,
+          closingStock: cl,
+          bottleRate: parseFloat(staged.bottleRate) || 0,
+          extraAmount: parseFloat(staged.extraAmount) || 0,
+          notes: staged.notes || ''
+        });
+      });
+
+      // 2. Add/override with rows currently on the current page
+      items.forEach(item => {
+        const key = `${item.brandId}_${item.sizeId}`;
+        const op = parseInt(item.openingStock, 10) || 0;
+        const ind = parseInt(item.indentStock, 10) || 0;
+        const tot = op + ind;
+        const hasCl = item.closingStock !== '' && item.closingStock !== null && item.closingStock !== undefined;
+        const cl = hasCl ? parseInt(item.closingStock, 10) : 0;
+        itemsMap.set(key, {
+          brandId: item.brandId,
+          sizeId: item.sizeId,
+          openingStock: op,
+          indentStock: ind,
+          totalStock: tot,
+          closingStock: cl,
+          bottleRate: parseFloat(item.bottleRate) || 0,
+          extraAmount: parseFloat(item.extraAmount) || 0,
+          notes: item.notes || ''
+        });
+      });
+
       const payload = {
         businessDate,
         status,
         shopId: selectedShop?.id,
-        items: items.map(item => {
-          const op = parseInt(item.openingStock, 10) || 0;
-          const ind = parseInt(item.indentStock, 10) || 0;
-          const tot = op + ind;
-          const hasCl = item.closingStock !== '' && item.closingStock !== null && item.closingStock !== undefined;
-          const cl = hasCl ? parseInt(item.closingStock, 10) : 0;
-          return {
-            brandId: item.brandId,
-            sizeId: item.sizeId,
-            openingStock: op,
-            indentStock: ind,
-            totalStock: tot,
-            closingStock: cl,
-            bottleRate: parseFloat(item.bottleRate) || 0,
-            extraAmount: parseFloat(item.extraAmount) || 0,
-            notes: item.notes || ''
-          };
-        })
+        items: Array.from(itemsMap.values())
       };
 
       const res = await apiClient.post('/inventory/daily-stock', payload, {
@@ -324,10 +519,11 @@ const DailyStock = () => {
       });
 
       if (res.success) {
+        setStagedEdits({});
         setSuccessMsg(
-          `Daily stock sheet ${status === 'COMPLETED' ? 'finalized' : 'saved as draft'} successfully for ${selectedShop?.name || 'Shop'} (${businessDate})! Saved Total Business: ₹${res.data.totalBusiness}`
+          `Daily stock sheet ${status === 'COMPLETED' ? 'finalized' : 'saved as draft'} successfully for ${selectedShop?.name || 'Shop'} (${businessDate})! Authoritative Total Business: ₹${res.data.totalBusiness}`
         );
-        fetchDailySheet(businessDate);
+        fetchDailySheet(businessDate, page, limit, debouncedSearch);
       }
     } catch (err) {
       setError(err?.message || 'Failed to save daily stock entries.');
@@ -448,27 +644,32 @@ const DailyStock = () => {
     }
   };
 
-  // Authoritative calculations for summary
-  const totalOpening = items.reduce((acc, curr) => acc + (parseInt(curr.openingStock, 10) || 0), 0);
-  const totalIndent = items.reduce((acc, curr) => acc + (parseInt(curr.indentStock, 10) || 0), 0);
-  const totalStockCount = items.reduce((acc, curr) => acc + (parseInt(curr.totalStock, 10) || 0), 0);
-  const totalClosing = items.reduce((acc, curr) => {
+  // Authoritative calculations for summary: prefer authoritative backendSummary across entire shop and date
+  const totalOpening = backendSummary ? backendSummary.totalOpening : items.reduce((acc, curr) => acc + (parseInt(curr.openingStock, 10) || 0), 0);
+  const totalIndent = backendSummary ? backendSummary.totalIndent : items.reduce((acc, curr) => acc + (parseInt(curr.indentStock, 10) || 0), 0);
+  const totalStockCount = backendSummary ? backendSummary.totalAvailable : items.reduce((acc, curr) => acc + (parseInt(curr.totalStock, 10) || 0), 0);
+  const totalClosing = backendSummary ? backendSummary.totalClosing : items.reduce((acc, curr) => {
     const hasCl = curr.closingStock !== '' && curr.closingStock !== null && curr.closingStock !== undefined;
     return acc + (hasCl ? parseInt(curr.closingStock, 10) : 0);
   }, 0);
-  const totalSaleBottles = items.reduce((acc, curr) => acc + (parseInt(curr.saleCount, 10) || 0), 0);
-  const totalStockValue = items.reduce((acc, curr) => acc + ((parseInt(curr.totalStock, 10) || 0) * (parseFloat(curr.bottleRate) || 0)), 0);
-  const totalBusinessAmount = items.reduce((acc, curr) => acc + (parseFloat(curr.saleAmount) || 0), 0);
-  const totalRemainingStockValue = items.reduce((acc, curr) => {
+  const totalSaleBottles = backendSummary ? backendSummary.totalSold : items.reduce((acc, curr) => acc + (parseInt(curr.saleCount, 10) || 0), 0);
+  const totalStockValue = backendSummary ? parseFloat(backendSummary.totalStockValue) || 0 : items.reduce((acc, curr) => acc + ((parseInt(curr.totalStock, 10) || 0) * (parseFloat(curr.bottleRate) || 0)), 0);
+  const totalBusinessAmount = backendSummary ? parseFloat(backendSummary.totalBusiness) || 0 : items.reduce((acc, curr) => acc + (parseFloat(curr.saleAmount) || 0), 0);
+  const totalRemainingStockValue = backendSummary ? parseFloat(backendSummary.totalRemainingStockValue) || 0 : items.reduce((acc, curr) => {
     const hasCl = curr.closingStock !== '' && curr.closingStock !== null && curr.closingStock !== undefined;
     const cl = hasCl ? parseInt(curr.closingStock, 10) || 0 : 0;
     const r = parseFloat(curr.bottleRate) || 0;
     return acc + (hasCl ? cl * r : 0);
   }, 0);
-  const totalExtraAmount = items.reduce((acc, curr) => acc + (parseFloat(curr.extraAmount) || 0), 0);
+  const totalExtraAmount = backendSummary ? parseFloat(backendSummary.totalExtraAmount) || 0 : items.reduce((acc, curr) => acc + (parseFloat(curr.extraAmount) || 0), 0);
+  const combinedTotalAmount = totalBusinessAmount + totalExtraAmount;
 
-  const allRowsCompleted = items.length > 0 && incompleteCount === 0 && invalidRowsCount === 0;
-  const isReconciled = allRowsCompleted && Math.abs(totalStockValue - (totalBusinessAmount + totalRemainingStockValue)) < 0.05;
+  const allRowsCompleted = backendSummary
+    ? backendSummary.reconciliationStatus !== 'PENDING'
+    : (items.length > 0 && incompleteCount === 0 && invalidRowsCount === 0);
+  const isReconciled = backendSummary
+    ? backendSummary.isReconciled
+    : (allRowsCompleted && Math.abs(totalStockValue - (totalBusinessAmount + totalRemainingStockValue)) < 0.05);
 
   return (
     <Layout title="Daily Stock Calculation Sheet">
@@ -756,19 +957,64 @@ const DailyStock = () => {
           </div>
         )}
 
-        {/* View Mode Switcher and Row Header Strip */}
-        <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2 px-1">
-          <div className="flex items-center gap-2">
+        {/* Sales & Extra Amount Breakdown Banner */}
+        {(pagination?.totalRecords ?? items.length) > 0 && (
+          <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-2xs">
+            <div className="flex items-center gap-2">
+              <Info className="w-4 h-4 text-indigo-600 shrink-0" />
+              <div>
+                <span className="font-bold text-slate-800">Sales & Extra Amount Breakdown:</span>{' '}
+                <span className="font-mono text-slate-900 font-semibold">
+                  Total Sales Amount (₹{totalBusinessAmount.toFixed(2)}) + Extra Total Amount (₹{totalExtraAmount.toFixed(2)}) = Combined Total Amount (₹{combinedTotalAmount.toFixed(2)})
+                </span>
+              </div>
+            </div>
+            <span className="text-[10px] text-slate-500 font-sans italic shrink-0">
+              * Extra Amount is informational only &amp; excluded from official closing revenue
+            </span>
+          </div>
+        )}
+
+        {/* View Mode Switcher, Search Bar and Row Header Strip */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-1">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Stock Inventory ({items.length} row{items.length === 1 ? '' : 's'})
+              Stock Inventory ({pagination?.totalRecords ?? items.length} {(pagination?.totalRecords ?? items.length) === 1 ? 'row' : 'rows'})
             </span>
             <span className="text-xs text-slate-300">•</span>
             <span className="text-xs text-slate-500 font-mono">
               {businessDate}
             </span>
+            {Object.keys(stagedEdits).length > 0 && (
+              <span className="text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-300 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 animate-pulse">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                <span>{Object.keys(stagedEdits).length} unsaved staged edit{Object.keys(stagedEdits).length === 1 ? '' : 's'} across pages</span>
+              </span>
+            )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Search Input */}
+            <div className="relative min-w-[200px] sm:min-w-[240px]">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search brand or size..."
+                className="w-full pl-8 pr-7 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus-theme transition-all"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
             {/* View Mode Toggle: Auto / Cards / Table */}
             <div className="flex items-center bg-slate-100 border border-slate-200 rounded-xl p-1 text-xs">
               <button
@@ -985,6 +1231,60 @@ const DailyStock = () => {
                   </div>
                 );
               })}
+
+              {/* Mobile Daily Totals Summary Card */}
+              {items.length > 0 && (
+                <div className="bg-slate-900 text-white rounded-2xl p-4 space-y-3 shadow-md border border-slate-800">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="text-xs uppercase font-bold tracking-wider text-amber-400">Daily Totals Summary</span>
+                    <span className="text-[11px] text-slate-400 font-mono">{pagination?.totalRecords ?? items.length} rows</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono">
+                    <div className="bg-slate-800/60 p-2 rounded-lg">
+                      <span className="text-[10px] text-slate-400 block">Opening</span>
+                      <span className="font-bold">{totalOpening}</span>
+                    </div>
+                    <div className="bg-slate-800/60 p-2 rounded-lg">
+                      <span className="text-[10px] text-indigo-300 block">Indent</span>
+                      <span className="font-bold text-indigo-300">{totalIndent}</span>
+                    </div>
+                    <div className="bg-slate-800/60 p-2 rounded-lg">
+                      <span className="text-[10px] text-slate-400 block">Available</span>
+                      <span className="font-bold">{totalStockCount}</span>
+                    </div>
+                    <div className="bg-slate-800/60 p-2 rounded-lg">
+                      <span className="text-[10px] text-emerald-300 block">Closing</span>
+                      <span className="font-bold text-emerald-300">{totalClosing}</span>
+                    </div>
+                    <div className="bg-slate-800/60 p-2 rounded-lg">
+                      <span className="text-[10px] text-amber-300 block">Sold Bottles</span>
+                      <span className="font-bold text-amber-400">{totalSaleBottles}</span>
+                    </div>
+                    <div className="bg-slate-800/60 p-2 rounded-lg">
+                      <span className="text-[10px] text-slate-400 block">Extra Amt</span>
+                      <span className="font-bold text-slate-300">₹{totalExtraAmount.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <div className="border-t border-slate-800 pt-2.5 space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400 font-sans">Total Stock Value:</span>
+                      <span className="font-bold font-mono text-white text-sm">₹{totalStockValue.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-emerald-400 font-semibold font-sans">Total Sales Amount:</span>
+                      <span className="font-bold font-mono text-emerald-400 text-sm">₹{totalBusinessAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-indigo-400 font-semibold font-sans">Remaining Stock Value:</span>
+                      <span className="font-bold font-mono text-indigo-300 text-sm">₹{totalRemainingStockValue.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-t border-slate-800/80 pt-2">
+                      <span className="text-slate-400 font-sans">Extra Amount (Info):</span>
+                      <span className="font-bold font-mono text-slate-300">₹{totalExtraAmount.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 2. Desktop Tabular View (Visible on tablet/desktop or when forced) */}
@@ -1120,27 +1420,27 @@ const DailyStock = () => {
                   })}
                 </tbody>
                 {/* Table Footer Totals */}
-                <tfoot className="font-mono text-xs">
-                  <tr>
-                    <td colSpan={3} className="font-sans uppercase font-bold" style={{ color: activeTheme.primary }}>
-                      Daily Totals:
+                <tfoot className="font-mono text-xs bg-slate-100 border-t-2 border-b-2 border-slate-300">
+                  <tr className="divide-x divide-slate-200">
+                    <td colSpan={3} className="font-sans uppercase font-bold px-3 py-2.5" style={{ color: activeTheme.primary }}>
+                      Daily Totals ({pagination?.totalRecords ?? items.length} rows):
                     </td>
-                    <td className="text-center text-slate-700">{totalOpening}</td>
-                    <td className="text-center text-indigo-700">{totalIndent}</td>
-                    <td className="text-center text-slate-900">{totalStockCount}</td>
-                    <td className="text-center text-emerald-600">{totalClosing}</td>
-                    <td className="text-center text-sm font-extrabold" style={{ color: activeTheme.primary }}>{totalSaleBottles}</td>
-                    <td className="text-right text-slate-400">—</td>
-                    <td className="text-right text-slate-900 font-extrabold font-sans">
+                    <td className="text-center text-slate-800 font-bold px-2 py-2.5">{totalOpening}</td>
+                    <td className="text-center text-indigo-700 font-bold px-2 py-2.5">{totalIndent}</td>
+                    <td className="text-center text-slate-900 font-bold px-2 py-2.5">{totalStockCount}</td>
+                    <td className="text-center text-emerald-700 font-bold px-2 py-2.5">{totalClosing}</td>
+                    <td className="text-center text-sm font-extrabold px-2 py-2.5" style={{ color: activeTheme.primary }}>{totalSaleBottles}</td>
+                    <td className="text-right text-slate-400 px-2 py-2.5">—</td>
+                    <td className="text-right text-slate-900 font-extrabold font-sans px-2 py-2.5">
                       ₹{totalStockValue.toFixed(2)}
                     </td>
-                    <td className="text-right text-emerald-700 font-extrabold font-sans">
+                    <td className="text-right text-emerald-700 font-extrabold font-sans px-2 py-2.5">
                       ₹{totalBusinessAmount.toFixed(2)}
                     </td>
-                    <td className="text-right text-indigo-700 font-extrabold font-sans">
+                    <td className="text-right text-indigo-700 font-extrabold font-sans px-2 py-2.5">
                       ₹{totalRemainingStockValue.toFixed(2)}
                     </td>
-                    <td className="text-right text-slate-500 text-xs font-sans">
+                    <td className="text-right text-slate-700 font-bold font-sans px-2 py-2.5" title="Informational only">
                       ₹{totalExtraAmount.toFixed(2)}
                     </td>
                   </tr>
@@ -1148,6 +1448,18 @@ const DailyStock = () => {
               </table>
             </div>
           </>
+        )}
+
+        {/* Pagination Controls */}
+        {(pagination?.totalRecords ?? items.length) > 0 && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-2 shadow-xs">
+            <Pagination
+              pagination={pagination}
+              onPageChange={setPage}
+              onLimitChange={setLimit}
+              disabled={loading}
+            />
+          </div>
         )}
 
         {/* Footer Navigation & Closing Prompt */}

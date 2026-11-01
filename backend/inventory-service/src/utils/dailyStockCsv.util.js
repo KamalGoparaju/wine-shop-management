@@ -118,7 +118,28 @@ const generateDailyStockCsv = (data) => {
     escapeCSV(allCompleted ? 'COMPLETED' : 'PENDING')
   ].join(',');
 
-  return [headers.map(h => `"${h}"`).join(','), ...rows, totalsRow].join('\r\n');
+  const combinedTotal = totalSalesAmount + totalExtra;
+  const isReconciled = allCompleted && Math.abs(totalStockValue - (totalSalesAmount + totalRemainingStockValue)) < 0.05;
+
+  const summaryLines = [
+    '',
+    [escapeCSV('EXECUTIVE STOCK & SALES VALUATION SUMMARY')].join(','),
+    [escapeCSV('Total Opening Bottles:'), escapeCSV(totalOpening)].join(','),
+    [escapeCSV('Total Indent Bottles:'), escapeCSV(totalIndent)].join(','),
+    [escapeCSV('Total Available Bottles:'), escapeCSV(totalAvailable)].join(','),
+    [escapeCSV('Total Closing Bottles:'), escapeCSV(totalClosing)].join(','),
+    [escapeCSV('Total Bottles Sold:'), escapeCSV(totalSale)].join(','),
+    [escapeCSV('Total Available Stock Valuation (Total Qty * Rate):'), escapeCSV(totalStockValue.toFixed(2))].join(','),
+    [escapeCSV('Total Daily Sales Amount (Revenue):'), escapeCSV(totalSalesAmount.toFixed(2))].join(','),
+    [escapeCSV('Total Remaining Stock Valuation (Closing Qty * Rate):'), escapeCSV(totalRemainingStockValue.toFixed(2))].join(','),
+    [escapeCSV('Reconciliation Identity (Stock Value = Sales + Remaining):'), escapeCSV(isReconciled ? 'VERIFIED (Exact Match)' : 'PENDING (Unentered Closings)')].join(','),
+    [escapeCSV('Total Extra Amount (Recorded Separately):'), escapeCSV(totalExtra.toFixed(2))].join(','),
+    [escapeCSV('Combined Informational Total (Sales + Extra Amount):'), escapeCSV(combinedTotal.toFixed(2))].join(','),
+    [escapeCSV('Sales & Extra Amount Breakdown Formula:'), escapeCSV(`Sales Amount (${totalSalesAmount.toFixed(2)}) + Extra Total Amount (${totalExtra.toFixed(2)}) = Combined Total Amount (${combinedTotal.toFixed(2)})`)].join(','),
+    [escapeCSV('Financial Rule:'), escapeCSV('* Extra Amount is informational only and strictly excluded from official closing revenue & collections.')].join(',')
+  ];
+
+  return [headers.map(h => `"${h}"`).join(','), ...rows, totalsRow, ...summaryLines].join('\r\n');
 };
 
 module.exports = {

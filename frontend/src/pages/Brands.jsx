@@ -2,12 +2,26 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import apiClient from '../api/client';
 import { useTheme } from '../context/ThemeContext';
-import { Plus, Search, Edit2, CheckCircle, XCircle, AlertCircle, Trash2, Wine, X } from 'lucide-react';
+import { 
+  Plus, 
+  Search, 
+  Edit2, 
+  CheckCircle, 
+  XCircle, 
+  AlertCircle, 
+  Trash2, 
+  Wine, 
+  X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
+} from 'lucide-react';
+import Pagination from '../components/Pagination';
+import usePagination from '../hooks/usePagination';
 
 const Brands = () => {
   const { activeTheme } = useTheme();
   const [brands, setBrands] = useState([]);
-  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingBrand, setEditingBrand] = useState(null);
@@ -16,23 +30,59 @@ const Brands = () => {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const {
+    page,
+    setPage,
+    limit,
+    setLimit,
+    sortBy,
+    sortOrder,
+    handleSort,
+    search,
+    setSearch,
+    debouncedSearch,
+    paginationParams,
+    getNextRequestId,
+    isCurrentRequest
+  } = usePagination({
+    initialPage: 1,
+    initialLimit: 25,
+    initialSortBy: 'serialNo',
+    initialSortOrder: 'asc'
+  });
+
+  const [paginationMeta, setPaginationMeta] = useState({
+    page: 1,
+    limit: 25,
+    totalRecords: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false
+  });
+
   const fetchBrands = async () => {
     setLoading(true);
+    const reqId = getNextRequestId();
     try {
-      const res = await apiClient.get('/inventory/brands', { params: { search } });
-      if (res.success) {
+      const res = await apiClient.get('/inventory/brands', { params: paginationParams });
+      if (isCurrentRequest(reqId) && res.success) {
         setBrands(res.data.brands || []);
+        if (res.data.pagination) {
+          setPaginationMeta(res.data.pagination);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch brands:', err);
     } finally {
-      setLoading(false);
+      if (isCurrentRequest(reqId)) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     fetchBrands();
-  }, [search]);
+  }, [debouncedSearch, page, limit, sortBy, sortOrder]);
 
   const handleOpenCreate = () => {
     setEditingBrand(null);
@@ -131,7 +181,7 @@ const Brands = () => {
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
           <div className="p-3.5 sm:p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
             <h2 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider">
-              Configured Brands ({brands.length})
+              Configured Brands ({paginationMeta.totalRecords})
             </h2>
           </div>
 
@@ -151,7 +201,7 @@ const Brands = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-xs font-bold text-slate-700 bg-slate-200/60 px-2 py-0.5 rounded-lg border border-slate-300">
-                            #{b.serialNo || idx + 1}
+                            #{b.serialNo || (page - 1) * limit + idx + 1}
                           </span>
                           <h3 className="font-bold text-slate-900 text-sm">{b.name}</h3>
                         </div>
@@ -211,11 +261,47 @@ const Brands = () => {
                 <table className="table-grid">
                   <thead>
                     <tr>
-                      <th className="w-16 text-center">S.No.</th>
-                      <th className="w-48">Brand Name</th>
+                      <th 
+                        className="w-20 text-center cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('serialNo')}
+                      >
+                        <div className="inline-flex items-center gap-1">
+                          <span>S.No.</span>
+                          {sortBy === 'serialNo' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="w-56 cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('name')}
+                      >
+                        <div className="inline-flex items-center gap-1">
+                          <span>Brand Name</span>
+                          {sortBy === 'name' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
                       <th>Description</th>
                       <th className="w-24 text-center">Products</th>
-                      <th className="w-28 text-center">Status</th>
+                      <th 
+                        className="w-28 text-center cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('isActive')}
+                      >
+                        <div className="inline-flex items-center justify-center gap-1">
+                          <span>Status</span>
+                          {sortBy === 'isActive' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
                       <th className="w-36 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -223,7 +309,7 @@ const Brands = () => {
                     {brands.map((b, idx) => (
                       <tr key={b.id}>
                         <td className="text-center font-bold text-slate-600 font-mono">
-                          #{b.serialNo || idx + 1}
+                          #{b.serialNo || (page - 1) * limit + idx + 1}
                         </td>
                         <td className="font-bold text-slate-900">{b.name}</td>
                         <td className="text-slate-500">{b.description || '—'}</td>
@@ -269,6 +355,14 @@ const Brands = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Server-Side Pagination Footer */}
+              <Pagination
+                pagination={paginationMeta}
+                onPageChange={setPage}
+                onLimitChange={setLimit}
+                disabled={loading}
+              />
             </>
           )}
         </div>

@@ -1,10 +1,15 @@
 const prisma = require('../config/prisma');
+const {
+  parsePaginationParams,
+  buildSortClause,
+  buildPaginationMetadata
+} = require('../utils/pagination.util');
 
 // GET /api/sales/expenses?date=YYYY-MM-DD
 const getExpenses = async (req, res, next) => {
   try {
     const shopId = req.headers['x-shop-id'] || req.query.shopId;
-    const { date, fromDate, toDate } = req.query;
+    const { date, fromDate, toDate, search, category, paymentMethod, sortBy, sortOrder } = req.query;
 
     if (!shopId) {
       return res.status(400).json({
@@ -23,22 +28,86 @@ const getExpenses = async (req, res, next) => {
         gte: new Date(`${fromDate}T00:00:00.000Z`),
         lte: new Date(`${toDate}T00:00:00.000Z`)
       };
+    } else if (fromDate) {
+      where.businessDate = {
+        gte: new Date(`${fromDate}T00:00:00.000Z`)
+      };
     }
 
-    const expenses = await prisma.expense.findMany({
-      where,
-      orderBy: { createdAt: 'desc' }
+    if (search && search.trim()) {
+      const term = search.trim();
+      where.OR = [
+        { description: { contains: term, mode: 'insensitive' } },
+        { recipient: { contains: term, mode: 'insensitive' } },
+        { category: { contains: term, mode: 'insensitive' } }
+      ];
+    }
+
+    if (category && category !== 'all') {
+      where.category = category.trim().toUpperCase();
+    }
+
+    if (paymentMethod && paymentMethod !== 'all') {
+      where.paymentMethod = paymentMethod.trim().toUpperCase();
+    }
+
+    const isExplicitlyPaginated = req.query.page !== undefined || req.query.limit !== undefined || req.query.paginate === 'true';
+    const pagination = parsePaginationParams(req.query);
+
+    const orderBy = buildSortClause({
+      sortBy,
+      sortOrder,
+      allowedFields: ['createdAt', 'businessDate', 'amount', 'category', 'paymentMethod'],
+      defaultSortBy: 'createdAt',
+      defaultSortOrder: 'desc',
+      tieBreaker: 'id'
     });
 
-    const totalExpenseAmount = expenses.reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
+    let totalRecords;
+    let totalExpenseAmount = 0;
+    let expenses;
+
+    if (isExplicitlyPaginated && pagination.isPaginated) {
+      const [aggregateResult, pagedExpenses] = await prisma.$transaction([
+        prisma.expense.aggregate({
+          where,
+          _count: { _all: true },
+          _sum: { amount: true }
+        }),
+        prisma.expense.findMany({
+          where,
+          orderBy,
+          skip: pagination.skip,
+          take: pagination.take
+        })
+      ]);
+
+      totalRecords = aggregateResult._count._all || 0;
+      totalExpenseAmount = aggregateResult._sum.amount ? parseFloat(aggregateResult._sum.amount) : 0;
+      expenses = pagedExpenses;
+    } else {
+      expenses = await prisma.expense.findMany({
+        where,
+        orderBy
+      });
+      totalRecords = expenses.length;
+      totalExpenseAmount = expenses.reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
+    }
+
+    const paginationMetadata = buildPaginationMetadata(
+      totalRecords,
+      pagination.page,
+      pagination.limit
+    );
 
     return res.status(200).json({
       success: true,
       message: 'Expenses retrieved successfully',
       data: {
-        totalCount: expenses.length,
+        totalCount: totalRecords,
         totalExpenseAmount: totalExpenseAmount.toFixed(2),
-        expenses
+        expenses,
+        pagination: paginationMetadata
       }
     });
   } catch (error) {

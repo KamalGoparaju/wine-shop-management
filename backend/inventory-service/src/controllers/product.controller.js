@@ -84,41 +84,87 @@ const createProduct = async (req, res, next) => {
   }
 };
 
-// Get products list with filtering
+const {
+  parsePaginationParams,
+  buildSortClause,
+  buildPaginationMetadata
+} = require('../utils/pagination.util');
+
+// Get products list with filtering, sorting & server-side pagination
 const getProducts = async (req, res, next) => {
   try {
-    const { search, brandId, isActive } = req.query;
+    const { search, brandId, isActive, sortBy, sortOrder } = req.query;
 
     const where = {};
-    if (search) {
+    if (search && search.trim()) {
       where.name = { contains: search.trim(), mode: 'insensitive' };
     }
     if (brandId) {
       where.brandId = brandId;
     }
-    if (isActive !== undefined) {
+    if (isActive !== undefined && isActive !== 'all') {
       where.isActive = isActive === 'true';
     }
 
-    const products = await prisma.product.findMany({
-      where,
-      include: {
-        brand: true,
-        _count: {
-          select: {
-            bottles: {
-              where: { status: 'IN_STOCK' }
-            }
+    const isExplicitlyPaginated = req.query.page !== undefined || req.query.limit !== undefined || req.query.paginate === 'true';
+    const pagination = parsePaginationParams(req.query);
+
+    const orderBy = buildSortClause({
+      sortBy,
+      sortOrder,
+      allowedFields: ['name', 'defaultBottlePrice', 'bottlesPerBox', 'createdAt', 'isActive'],
+      defaultSortBy: 'name',
+      defaultSortOrder: 'asc',
+      tieBreaker: 'id'
+    });
+
+    const include = {
+      brand: true,
+      _count: {
+        select: {
+          bottles: {
+            where: { status: 'IN_STOCK' }
           }
         }
-      },
-      orderBy: { name: 'asc' }
-    });
+      }
+    };
+
+    let totalRecords;
+    let products;
+
+    if (isExplicitlyPaginated && pagination.isPaginated) {
+      [totalRecords, products] = await prisma.$transaction([
+        prisma.product.count({ where }),
+        prisma.product.findMany({
+          where,
+          include,
+          orderBy,
+          skip: pagination.skip,
+          take: pagination.take
+        })
+      ]);
+    } else {
+      products = await prisma.product.findMany({
+        where,
+        include,
+        orderBy
+      });
+      totalRecords = products.length;
+    }
+
+    const paginationMetadata = buildPaginationMetadata(
+      totalRecords,
+      pagination.page,
+      pagination.limit
+    );
 
     return res.status(200).json({
       success: true,
       message: 'Products retrieved successfully',
-      data: { products }
+      data: {
+        products,
+        pagination: paginationMetadata
+      }
     });
   } catch (error) {
     next(error);

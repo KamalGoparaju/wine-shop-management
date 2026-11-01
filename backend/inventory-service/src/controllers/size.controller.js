@@ -1,47 +1,89 @@
 const prisma = require('../config/prisma');
+const {
+  parsePaginationParams,
+  buildSortClause,
+  buildPaginationMetadata
+} = require('../utils/pagination.util');
 
-// Get sizes list with optional search & active/inactive filtering
+// Get sizes list with optional search, sorting, active/inactive filtering & server-side pagination
 const getSizes = async (req, res, next) => {
   try {
-    const { search, isActive, includeInactive } = req.query;
+    const { search, isActive, includeInactive, sortBy, sortOrder } = req.query;
 
     const where = {};
-    if (search) {
+    if (search && search.trim()) {
       where.OR = [
         { code: { contains: search.trim(), mode: 'insensitive' } },
         { name: { contains: search.trim(), mode: 'insensitive' } }
       ];
     }
 
-    if (isActive !== undefined) {
+    if (isActive !== undefined && isActive !== 'all') {
       if (isActive === 'true') where.isActive = true;
       else if (isActive === 'false') where.isActive = false;
       // if isActive === 'all', do not filter by isActive
-    } else if (includeInactive !== 'true') {
+    } else if (includeInactive !== 'true' && req.query.isActive === undefined) {
       // Default to active sizes only for backwards compatibility with Brand modal
       where.isActive = true;
     }
 
-    const sizes = await prisma.size.findMany({
-      where,
-      include: {
-        _count: {
-          select: {
-            rates: true,
-            dailyStockRecords: true
-          }
-        }
-      },
-      orderBy: [
-        { volumeMl: 'desc' },
-        { code: 'asc' }
-      ]
+    const isExplicitlyPaginated = req.query.page !== undefined || req.query.limit !== undefined || req.query.paginate === 'true';
+    const pagination = parsePaginationParams(req.query);
+
+    const orderBy = buildSortClause({
+      sortBy,
+      sortOrder,
+      allowedFields: ['volumeMl', 'code', 'name', 'createdAt', 'isActive'],
+      defaultSortBy: 'volumeMl',
+      defaultSortOrder: 'desc',
+      tieBreaker: 'code'
     });
+
+    const include = {
+      _count: {
+        select: {
+          rates: true,
+          dailyStockRecords: true
+        }
+      }
+    };
+
+    let totalRecords;
+    let sizes;
+
+    if (isExplicitlyPaginated && pagination.isPaginated) {
+      [totalRecords, sizes] = await prisma.$transaction([
+        prisma.size.count({ where }),
+        prisma.size.findMany({
+          where,
+          include,
+          orderBy,
+          skip: pagination.skip,
+          take: pagination.take
+        })
+      ]);
+    } else {
+      sizes = await prisma.size.findMany({
+        where,
+        include,
+        orderBy
+      });
+      totalRecords = sizes.length;
+    }
+
+    const paginationMetadata = buildPaginationMetadata(
+      totalRecords,
+      pagination.page,
+      pagination.limit
+    );
 
     return res.status(200).json({
       success: true,
       message: 'Sizes retrieved successfully',
-      data: { sizes }
+      data: {
+        sizes,
+        pagination: paginationMetadata
+      }
     });
   } catch (error) {
     next(error);

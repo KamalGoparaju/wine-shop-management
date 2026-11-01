@@ -19,10 +19,16 @@ import {
   Coins, 
   Package, 
   Unlock, 
-  Info 
+  Info,
+  Filter,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { downloadAuthenticatedFile } from '../utils/download';
 import { useTheme } from '../context/ThemeContext';
+import Pagination from '../components/Pagination';
+import usePagination from '../hooks/usePagination';
 
 const ClosingHistory = () => {
   const { selectedShop } = useAuth();
@@ -35,6 +41,7 @@ const ClosingHistory = () => {
     return d.toISOString().slice(0, 10);
   });
   const [toDate, setToDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,58 +63,76 @@ const ClosingHistory = () => {
   const [reopenLoading, setReopenLoading] = useState(false);
   const [modalMsg, setModalMsg] = useState({ error: '', success: '' });
 
+  const {
+    page,
+    setPage,
+    limit,
+    setLimit,
+    sortBy,
+    sortOrder,
+    handleSort,
+    search,
+    setSearch,
+    debouncedSearch,
+    resetPage,
+    paginationParams,
+    getNextRequestId,
+    isCurrentRequest
+  } = usePagination({
+    initialPage: 1,
+    initialLimit: 25,
+    initialSortBy: 'businessDate',
+    initialSortOrder: 'desc'
+  });
+
+  const [paginationMeta, setPaginationMeta] = useState({
+    page: 1,
+    limit: 25,
+    totalRecords: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false
+  });
+
   const fetchHistory = async () => {
     if (!selectedShop?.id) return;
     const currentShopId = selectedShop.id;
     setLoading(true);
+    const reqId = getNextRequestId();
 
     try {
+      const params = {
+        ...paginationParams,
+        fromDate,
+        toDate,
+        shopId: currentShopId
+      };
+      if (statusFilter !== 'all') {
+        params.status = statusFilter;
+      }
+
       const res = await apiClient.get('/sales/closing/history', {
-        params: { fromDate, toDate, shopId: currentShopId },
+        params,
         headers: { 'x-shop-id': currentShopId }
       });
-      if (res.success) {
+      if (isCurrentRequest(reqId) && res.success) {
         setHistory(res.data.history || []);
+        if (res.data.pagination) {
+          setPaginationMeta(res.data.pagination);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch closing history:', err);
     } finally {
-      setLoading(false);
+      if (isCurrentRequest(reqId)) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    let isCurrent = true;
-    const currentShopId = selectedShop?.id;
-
-    if (!currentShopId) return;
-
-    setHistory([]);
-    setSelectedRecord(null);
-    setLoading(true);
-
-    apiClient.get('/sales/closing/history', {
-      params: { fromDate, toDate, shopId: currentShopId },
-      headers: { 'x-shop-id': currentShopId }
-    })
-      .then((res) => {
-        if (!isCurrent) return;
-        if (res.success) {
-          setHistory(res.data.history || []);
-        }
-      })
-      .catch((err) => {
-        if (!isCurrent) return;
-        console.error('Failed to fetch closing history:', err);
-      })
-      .finally(() => {
-        if (isCurrent) setLoading(false);
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [fromDate, toDate, selectedShop?.id]);
+    fetchHistory();
+  }, [fromDate, toDate, statusFilter, selectedShop?.id, page, limit, sortBy, sortOrder]);
 
   // Quick Date Filter Presets
   const setFilterToday = () => {
@@ -352,6 +377,23 @@ const ClosingHistory = () => {
               />
             </div>
 
+            {/* Status Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700">
+              <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="bg-transparent text-slate-800 text-xs font-medium focus:outline-none cursor-pointer"
+              >
+                <option value="all">All Statuses</option>
+                <option value="CLOSED">Closed</option>
+                <option value="REOPENED">Reopened</option>
+              </select>
+            </div>
+
             <button
               onClick={fetchHistory}
               className="p-2 sm:p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200 transition-colors"
@@ -386,7 +428,7 @@ const ClosingHistory = () => {
           <div className="p-3.5 sm:p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
             <h2 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
               <History className="w-4 h-4" style={{ color: activeTheme.primary }} />
-              Saved Daily Closings ({history.length})
+              Saved Daily Closings ({paginationMeta.totalRecords})
             </h2>
             <span className="text-[11px] text-slate-500 font-mono">
               {fromDate} — {toDate}
@@ -479,7 +521,19 @@ const ClosingHistory = () => {
                 <table className="table-grid font-mono">
                   <thead>
                     <tr>
-                      <th className="w-24">Date</th>
+                      <th 
+                        className="w-28 cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('businessDate')}
+                      >
+                        <div className="inline-flex items-center gap-1 font-sans">
+                          <span>Date</span>
+                          {sortBy === 'businessDate' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
                       <th className="w-16 text-center" style={{ color: activeTheme.primary }}>Sold</th>
                       <th className="w-16 text-center">Rem.</th>
                       <th className="text-right">Total Business</th>
@@ -487,7 +541,19 @@ const ClosingHistory = () => {
                       <th className="text-right text-indigo-600">Online</th>
                       <th className="text-right text-teal-600">Cash</th>
                       <th className="text-right font-bold text-slate-800">Total Coll.</th>
-                      <th className="text-right font-bold text-emerald-700">Final Amt</th>
+                      <th 
+                        className="text-right font-bold text-emerald-700 cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('finalAmount')}
+                      >
+                        <div className="inline-flex items-center justify-end gap-1 font-sans">
+                          <span>Final Amt</span>
+                          {sortBy === 'finalAmount' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
                       <th className="text-right">Diff</th>
                       <th className="text-right text-slate-500">Extra Amt*</th>
                       <th className="text-center font-sans w-24">Status</th>
@@ -575,6 +641,14 @@ const ClosingHistory = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Server-Side Pagination Footer */}
+              <Pagination
+                pagination={paginationMeta}
+                onPageChange={setPage}
+                onLimitChange={setLimit}
+                disabled={loading}
+              />
             </>
           )}
         </div>

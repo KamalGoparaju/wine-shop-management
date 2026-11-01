@@ -2,13 +2,27 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import apiClient from '../api/client';
 import { useTheme } from '../context/ThemeContext';
-import { Plus, Search, Edit2, CheckCircle, XCircle, AlertCircle, Trash2, PackageCheck, X } from 'lucide-react';
+import { 
+  Plus, 
+  Search, 
+  Edit2, 
+  CheckCircle, 
+  XCircle, 
+  AlertCircle, 
+  Trash2, 
+  PackageCheck, 
+  X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
+} from 'lucide-react';
+import Pagination from '../components/Pagination';
+import usePagination from '../hooks/usePagination';
 
 const Products = () => {
   const { activeTheme } = useTheme();
   const [products, setProducts] = useState([]);
   const [brands, setBrands] = useState([]);
-  const [search, setSearch] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -24,9 +38,39 @@ const Products = () => {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const {
+    page,
+    setPage,
+    limit,
+    setLimit,
+    sortBy,
+    sortOrder,
+    handleSort,
+    search,
+    setSearch,
+    debouncedSearch,
+    paginationParams,
+    getNextRequestId,
+    isCurrentRequest
+  } = usePagination({
+    initialPage: 1,
+    initialLimit: 25,
+    initialSortBy: 'name',
+    initialSortOrder: 'asc'
+  });
+
+  const [paginationMeta, setPaginationMeta] = useState({
+    page: 1,
+    limit: 25,
+    totalRecords: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false
+  });
+
   const fetchBrands = async () => {
     try {
-      const res = await apiClient.get('/inventory/brands', { params: { isActive: 'true' } });
+      const res = await apiClient.get('/inventory/brands', { params: { isActive: 'true', limit: 'all' } });
       if (res.success) {
         setBrands(res.data.brands || []);
       }
@@ -37,19 +81,26 @@ const Products = () => {
 
   const fetchProducts = async () => {
     setLoading(true);
+    const reqId = getNextRequestId();
     try {
-      const params = {};
-      if (search) params.search = search;
-      if (selectedBrand) params.brandId = selectedBrand;
+      const params = {
+        ...paginationParams,
+        brandId: selectedBrand || undefined
+      };
 
       const res = await apiClient.get('/inventory/products', { params });
-      if (res.success) {
+      if (isCurrentRequest(reqId) && res.success) {
         setProducts(res.data.products || []);
+        if (res.data.pagination) {
+          setPaginationMeta(res.data.pagination);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch products:', err);
     } finally {
-      setLoading(false);
+      if (isCurrentRequest(reqId)) {
+        setLoading(false);
+      }
     }
   };
 
@@ -59,7 +110,7 @@ const Products = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, [search, selectedBrand]);
+  }, [debouncedSearch, selectedBrand, page, limit, sortBy, sortOrder]);
 
   const handleOpenCreate = () => {
     setEditingProduct(null);
@@ -188,7 +239,7 @@ const Products = () => {
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
           <div className="p-3.5 sm:p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
             <h2 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider">
-              Configured Products ({products.length})
+              Configured Products ({paginationMeta.totalRecords})
             </h2>
           </div>
 
@@ -276,13 +327,49 @@ const Products = () => {
                 <table className="table-grid">
                   <thead>
                     <tr>
-                      <th>Product Name</th>
+                      <th 
+                        className="cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('name')}
+                      >
+                        <div className="inline-flex items-center gap-1">
+                          <span>Product Name</span>
+                          {sortBy === 'name' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
                       <th className="w-40">Brand</th>
                       <th className="w-24 text-center">Volume</th>
                       <th className="w-24 text-center">Bottles/Box</th>
-                      <th className="w-32 text-right">Default Bottle Price</th>
+                      <th 
+                        className="w-36 text-right cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('defaultBottlePrice')}
+                      >
+                        <div className="inline-flex items-center justify-end gap-1">
+                          <span>Default Bottle Price</span>
+                          {sortBy === 'defaultBottlePrice' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
                       <th className="w-32 text-right">Default Box Price</th>
-                      <th className="w-28 text-center">Status</th>
+                      <th 
+                        className="w-28 text-center cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('isActive')}
+                      >
+                        <div className="inline-flex items-center justify-center gap-1">
+                          <span>Status</span>
+                          {sortBy === 'isActive' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
                       <th className="w-36 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -336,6 +423,14 @@ const Products = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Server-Side Pagination Footer */}
+              <Pagination
+                pagination={paginationMeta}
+                onPageChange={setPage}
+                onLimitChange={setLimit}
+                disabled={loading}
+              />
             </>
           )}
         </div>

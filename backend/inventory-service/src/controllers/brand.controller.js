@@ -48,33 +48,92 @@ const createBrand = async (req, res, next) => {
   }
 };
 
-// Get brands list with optional search & filtering
+const {
+  parsePaginationParams,
+  buildSortClause,
+  buildPaginationMetadata
+} = require('../utils/pagination.util');
+
+// Get brands list with optional search, sorting & server-side pagination
 const getBrands = async (req, res, next) => {
   try {
-    const { search, isActive } = req.query;
+    const { search, isActive, sortBy, sortOrder } = req.query;
 
     const where = {};
-    if (search) {
-      where.name = { contains: search.trim(), mode: 'insensitive' };
+    if (search && search.trim()) {
+      const term = search.trim();
+      const serialNum = parseInt(term, 10);
+      if (!isNaN(serialNum)) {
+        where.OR = [
+          { name: { contains: term, mode: 'insensitive' } },
+          { serialNo: serialNum }
+        ];
+      } else {
+        where.name = { contains: term, mode: 'insensitive' };
+      }
     }
-    if (isActive !== undefined) {
+    if (isActive !== undefined && isActive !== 'all') {
       where.isActive = isActive === 'true';
     }
 
-    const brands = await prisma.brand.findMany({
-      where,
-      include: {
-        _count: {
-          select: { products: true }
-        }
-      },
-      orderBy: { name: 'asc' }
+    const isExplicitlyPaginated = req.query.page !== undefined || req.query.limit !== undefined || req.query.paginate === 'true';
+    const pagination = parsePaginationParams(req.query);
+
+    const orderBy = buildSortClause({
+      sortBy,
+      sortOrder,
+      allowedFields: ['name', 'serialNo', 'createdAt', 'isActive'],
+      defaultSortBy: 'serialNo',
+      defaultSortOrder: 'asc',
+      tieBreaker: 'id'
     });
+
+    const include = {
+      _count: {
+        select: {
+          products: true,
+          rates: true,
+          dailyStockRecords: true
+        }
+      }
+    };
+
+    let totalRecords;
+    let brands;
+
+    if (isExplicitlyPaginated && pagination.isPaginated) {
+      [totalRecords, brands] = await prisma.$transaction([
+        prisma.brand.count({ where }),
+        prisma.brand.findMany({
+          where,
+          include,
+          orderBy,
+          skip: pagination.skip,
+          take: pagination.take
+        })
+      ]);
+    } else {
+      brands = await prisma.brand.findMany({
+        where,
+        include,
+        orderBy
+      });
+      totalRecords = brands.length;
+    }
+
+    const paginationMetadata = buildPaginationMetadata(
+      totalRecords,
+      pagination.page,
+      pagination.limit
+    );
 
     return res.status(200).json({
       success: true,
       message: 'Brands retrieved successfully',
-      data: { brands }
+      data: {
+        brands,
+        pagination: paginationMetadata
+      }
     });
   } catch (error) {
     next(error);

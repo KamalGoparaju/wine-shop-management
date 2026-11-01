@@ -171,35 +171,88 @@ const createStockEntry = async (req, res, next) => {
   }
 };
 
-// Get list of stock entries
+const {
+  parsePaginationParams,
+  buildSortClause,
+  buildPaginationMetadata
+} = require('../utils/pagination.util');
+
+// Get list of stock entries with search, sorting & server-side pagination
 const getStockEntries = async (req, res, next) => {
   try {
-    const { productId, status } = req.query;
+    const { productId, status, search, sortBy, sortOrder } = req.query;
 
     const where = {};
     if (productId) where.productId = productId;
     if (status) where.status = status;
+    if (search && search.trim()) {
+      const term = search.trim();
+      where.OR = [
+        { notes: { contains: term, mode: 'insensitive' } },
+        { product: { name: { contains: term, mode: 'insensitive' } } }
+      ];
+    }
 
-    const stockEntries = await prisma.stockEntry.findMany({
-      where,
-      include: {
-        product: {
-          include: { brand: true }
-        },
-        _count: {
-          select: {
-            boxes: true,
-            bottles: true
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
+    const isExplicitlyPaginated = req.query.page !== undefined || req.query.limit !== undefined || req.query.paginate === 'true';
+    const pagination = parsePaginationParams(req.query);
+
+    const orderBy = buildSortClause({
+      sortBy,
+      sortOrder,
+      allowedFields: ['createdAt', 'totalBottles', 'numberOfBoxes'],
+      defaultSortBy: 'createdAt',
+      defaultSortOrder: 'desc',
+      tieBreaker: 'id'
     });
+
+    const include = {
+      product: {
+        include: { brand: true }
+      },
+      _count: {
+        select: {
+          boxes: true,
+          bottles: true
+        }
+      }
+    };
+
+    let totalRecords;
+    let stockEntries;
+
+    if (isExplicitlyPaginated && pagination.isPaginated) {
+      [totalRecords, stockEntries] = await prisma.$transaction([
+        prisma.stockEntry.count({ where }),
+        prisma.stockEntry.findMany({
+          where,
+          include,
+          orderBy,
+          skip: pagination.skip,
+          take: pagination.take
+        })
+      ]);
+    } else {
+      stockEntries = await prisma.stockEntry.findMany({
+        where,
+        include,
+        orderBy
+      });
+      totalRecords = stockEntries.length;
+    }
+
+    const paginationMetadata = buildPaginationMetadata(
+      totalRecords,
+      pagination.page,
+      pagination.limit
+    );
 
     return res.status(200).json({
       success: true,
       message: 'Stock entries retrieved successfully',
-      data: { stockEntries }
+      data: {
+        stockEntries,
+        pagination: paginationMetadata
+      }
     });
   } catch (error) {
     next(error);

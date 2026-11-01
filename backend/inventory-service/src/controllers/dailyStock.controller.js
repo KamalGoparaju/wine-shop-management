@@ -2,6 +2,10 @@ const prisma = require('../config/prisma');
 const { generateDailyStockPdf } = require('../utils/dailyStockPdf.util');
 const { generateDailyStockCsv } = require('../utils/dailyStockCsv.util');
 const { generateDailyStockExcel } = require('../utils/dailyStockExcel.util');
+const {
+  parsePaginationParams,
+  buildPaginationMetadata
+} = require('../utils/pagination.util');
 
 const SHOP_METADATA = {
   'SHOP1': { code: 'SHOP1', name: 'Shop 1 — Central Wine Lounge' },
@@ -197,6 +201,32 @@ const getDailyStockSheet = async (req, res, next) => {
         ? (isReconciled ? 'VERIFIED' : 'DISCREPANCY')
         : 'PENDING';
 
+      const isExplicitlyPaginated = req.query.page !== undefined || req.query.limit !== undefined || req.query.paginate === 'true';
+      const pagination = parsePaginationParams(req.query);
+
+      let filteredRecords = enrichedRecords;
+      if (req.query.search && req.query.search.trim()) {
+        const term = req.query.search.trim().toLowerCase();
+        filteredRecords = enrichedRecords.filter(r => {
+          const brandName = (r.brand?.name || '').toLowerCase();
+          const brandSerial = String(r.brand?.serialNo || '');
+          const sizeCode = (r.size?.code || '').toLowerCase();
+          const sizeName = (r.size?.name || '').toLowerCase();
+          return brandName.includes(term) || brandSerial === term || sizeCode.includes(term) || sizeName.includes(term);
+        });
+      }
+
+      let pagedRecords = filteredRecords;
+      if (isExplicitlyPaginated && pagination.isPaginated) {
+        pagedRecords = filteredRecords.slice(pagination.skip, pagination.skip + pagination.take);
+      }
+
+      const paginationMetadata = buildPaginationMetadata(
+        filteredRecords.length,
+        pagination.page,
+        pagination.limit
+      );
+
       return res.status(200).json({
         success: true,
         message: 'Daily stock sheet retrieved',
@@ -219,7 +249,8 @@ const getDailyStockSheet = async (req, res, next) => {
             reconciliationStatus,
             totalExtraAmount: totalExtraAmount.toFixed(2)
           },
-          records: enrichedRecords
+          records: pagedRecords,
+          pagination: paginationMetadata
         }
       });
     }
@@ -335,6 +366,32 @@ const getDailyStockSheet = async (req, res, next) => {
     const totalOpening = generatedItems.reduce((acc, r) => acc + (parseInt(r.openingStock, 10) || 0), 0);
     const totalStockValue = generatedItems.reduce((acc, r) => acc + (r.stockValue || 0), 0);
 
+    const isExplicitlyPaginated = req.query.page !== undefined || req.query.limit !== undefined || req.query.paginate === 'true';
+    const pagination = parsePaginationParams(req.query);
+
+    let filteredRecords = generatedItems;
+    if (req.query.search && req.query.search.trim()) {
+      const term = req.query.search.trim().toLowerCase();
+      filteredRecords = generatedItems.filter(r => {
+        const brandName = (r.brand?.name || '').toLowerCase();
+        const brandSerial = String(r.brand?.serialNo || '');
+        const sizeCode = (r.size?.code || '').toLowerCase();
+        const sizeName = (r.size?.name || '').toLowerCase();
+        return brandName.includes(term) || brandSerial === term || sizeCode.includes(term) || sizeName.includes(term);
+      });
+    }
+
+    let pagedRecords = filteredRecords;
+    if (isExplicitlyPaginated && pagination.isPaginated) {
+      pagedRecords = filteredRecords.slice(pagination.skip, pagination.skip + pagination.take);
+    }
+
+    const paginationMetadata = buildPaginationMetadata(
+      filteredRecords.length,
+      pagination.page,
+      pagination.limit
+    );
+
     return res.status(200).json({
       success: true,
       message: 'New daily stock sheet initialized',
@@ -359,7 +416,8 @@ const getDailyStockSheet = async (req, res, next) => {
           reconciliationStatus: 'PENDING',
           totalExtraAmount: '0.00'
         },
-        records: generatedItems
+        records: pagedRecords,
+        pagination: paginationMetadata
       }
     });
   } catch (error) {
@@ -409,22 +467,15 @@ const saveDailyStockSheet = async (req, res, next) => {
       });
     }
 
-    // If finalizing as COMPLETED, ensure all rows have closing counts
-    if (status === 'COMPLETED') {
-      const incomplete = items.find(
-        it => it.closingStock === '' || it.closingStock === null || it.closingStock === undefined
-      );
-      if (incomplete) {
-        return res.status(400).json({
-          success: false,
-          message: 'All brand rows must have a valid physical closing count to finalize the sheet.',
-          error: 'INCOMPLETE_CLOSING_ENTRY'
-        });
-      }
-    }
+    // Check if day is brand new (no records exist yet for this shop and businessDate)
+    const existingCount = await prisma.dailyStockRecord.count({
+      where: { shopId, businessDate: targetDate }
+    });
 
     // Validate and prepare upsert records
     const upsertOperations = [];
+    const submittedKeys = new Set();
+
     for (const item of items) {
       const opening = Math.max(0, parseInt(item.openingStock, 10) || 0);
       const indent = Math.max(0, parseInt(item.indentStock, 10) || 0);
@@ -461,6 +512,8 @@ const saveDailyStockSheet = async (req, res, next) => {
         notes: item.notes ? item.notes.trim() : null
       };
 
+      submittedKeys.add(`${item.brandId}_${item.sizeId}`);
+
       upsertOperations.push(
         prisma.dailyStockRecord.upsert({
           where: {
@@ -477,27 +530,123 @@ const saveDailyStockSheet = async (req, res, next) => {
       );
     }
 
+    // If new day and not all active brands/sizes were submitted (e.g. paginated save), auto-initialize remaining
+    if (existingCount === 0) {
+      const [allBrands, allSizes, allRates] = await Promise.all([
+        prisma.brand.findMany({ where: { isActive: true } }),
+        prisma.size.findMany({ where: { isActive: true } }),
+        prisma.rate.findMany({ where: { shopId, isActive: true } })
+      ]);
+
+      const previousRecordDay = await prisma.dailyStockRecord.findFirst({
+        where: { shopId, businessDate: { lt: targetDate } },
+        orderBy: { businessDate: 'desc' }
+      });
+
+      const previousRecordsMap = new Map();
+      if (previousRecordDay) {
+        const prevRecords = await prisma.dailyStockRecord.findMany({
+          where: { shopId, businessDate: previousRecordDay.businessDate }
+        });
+        prevRecords.forEach(r => {
+          previousRecordsMap.set(`${r.brandId}_${r.sizeId}`, r.closingStock);
+        });
+      }
+
+      for (const brand of allBrands) {
+        for (const size of allSizes) {
+          const key = `${brand.id}_${size.id}`;
+          if (!submittedKeys.has(key)) {
+            const prevClosing = previousRecordsMap.get(key);
+            const op = prevClosing !== undefined ? prevClosing : 0;
+            const shopRate = allRates.find(r => r.brandId === brand.id && r.sizeId === size.id);
+            const rate = shopRate ? parseFloat(shopRate.bottleRate) : (parseFloat(brand.baseBottlePrice) || 0);
+
+            upsertOperations.push(
+              prisma.dailyStockRecord.upsert({
+                where: {
+                  shopId_businessDate_brandId_sizeId: {
+                    shopId,
+                    businessDate: targetDate,
+                    brandId: brand.id,
+                    sizeId: size.id
+                  }
+                },
+                update: {},
+                create: {
+                  shopId,
+                  businessDate: targetDate,
+                  brandId: brand.id,
+                  sizeId: size.id,
+                  openingStock: op,
+                  indentStock: 0,
+                  totalStock: op,
+                  closingStock: 0,
+                  saleCount: 0,
+                  bottleRate: rate,
+                  saleAmount: 0,
+                  extraAmount: 0,
+                  status: 'DRAFT',
+                  notes: null
+                }
+              })
+            );
+          }
+        }
+      }
+    }
+
     // Execute atomically
-    const savedRecords = await prisma.$transaction(upsertOperations);
+    await prisma.$transaction(upsertOperations);
 
-    // Compute summary for response
-    const totalOpening = savedRecords.reduce((acc, r) => acc + (parseInt(r.openingStock, 10) || 0), 0);
-    const totalIndent = savedRecords.reduce((acc, r) => acc + (parseInt(r.indentStock, 10) || 0), 0);
-    const totalAvailable = savedRecords.reduce((acc, r) => acc + (parseInt(r.totalStock, 10) || 0), 0);
-    const totalRemaining = savedRecords.reduce((acc, r) => acc + (parseInt(r.closingStock, 10) || 0), 0);
-    const totalSold = savedRecords.reduce((acc, r) => acc + (parseInt(r.saleCount, 10) || 0), 0);
-    const totalStockValue = savedRecords.reduce((acc, r) => acc + ((parseInt(r.totalStock, 10) || 0) * (parseFloat(r.bottleRate) || 0)), 0);
-    const totalBusiness = savedRecords.reduce((acc, r) => acc + (parseFloat(r.saleAmount) || 0), 0);
-    const totalRemainingStockValue = savedRecords.reduce((acc, r) => acc + ((parseInt(r.closingStock, 10) || 0) * (parseFloat(r.bottleRate) || 0)), 0);
-    const totalExtraAmount = savedRecords.reduce((acc, r) => acc + (parseFloat(r.extraAmount) || 0), 0);
+    // Fetch authoritative day records across ALL brands in the shop
+    const allDayRecords = await prisma.dailyStockRecord.findMany({
+      where: {
+        shopId,
+        businessDate: targetDate
+      },
+      include: {
+        brand: true,
+        size: true
+      },
+      orderBy: [
+        { brand: { serialNo: 'asc' } },
+        { size: { volumeMl: 'asc' } }
+      ]
+    });
 
-    const allCompleted = savedRecords.length > 0 && status === 'COMPLETED';
+    // If finalizing as COMPLETED, verify all rows across the entire day in this shop have closing counts
+    if (status === 'COMPLETED') {
+      const anyIncomplete = allDayRecords.find(
+        r => r.closingStock === '' || r.closingStock === null || r.closingStock === undefined
+      );
+      if (anyIncomplete) {
+        return res.status(400).json({
+          success: false,
+          message: 'All brand rows must have a valid physical closing count to finalize the sheet.',
+          error: 'INCOMPLETE_CLOSING_ENTRY'
+        });
+      }
+    }
+
+    // Compute authoritative shop-wide totals
+    const totalOpening = allDayRecords.reduce((acc, r) => acc + (parseInt(r.openingStock, 10) || 0), 0);
+    const totalIndent = allDayRecords.reduce((acc, r) => acc + (parseInt(r.indentStock, 10) || 0), 0);
+    const totalAvailable = allDayRecords.reduce((acc, r) => acc + (parseInt(r.totalStock, 10) || 0), 0);
+    const totalRemaining = allDayRecords.reduce((acc, r) => acc + (parseInt(r.closingStock, 10) || 0), 0);
+    const totalSold = allDayRecords.reduce((acc, r) => acc + (parseInt(r.saleCount, 10) || 0), 0);
+    const totalStockValue = allDayRecords.reduce((acc, r) => acc + ((parseInt(r.totalStock, 10) || 0) * (parseFloat(r.bottleRate) || 0)), 0);
+    const totalBusiness = allDayRecords.reduce((acc, r) => acc + (parseFloat(r.saleAmount) || 0), 0);
+    const totalRemainingStockValue = allDayRecords.reduce((acc, r) => acc + ((parseInt(r.closingStock, 10) || 0) * (parseFloat(r.bottleRate) || 0)), 0);
+    const totalExtraAmount = allDayRecords.reduce((acc, r) => acc + (parseFloat(r.extraAmount) || 0), 0);
+
+    const allCompleted = allDayRecords.length > 0 && status === 'COMPLETED';
     const isReconciled = allCompleted && Math.abs(totalStockValue - (totalBusiness + totalRemainingStockValue)) < 0.05;
     const reconciliationStatus = allCompleted
       ? (isReconciled ? 'VERIFIED' : 'DISCREPANCY')
       : 'PENDING';
 
-    const enrichedSavedRecords = savedRecords.map(r => ({
+    const enrichedSavedRecords = allDayRecords.map(r => ({
       ...r,
       stockValue: (parseInt(r.totalStock, 10) || 0) * (parseFloat(r.bottleRate) || 0),
       remainingStockValue: parseFloat(((parseInt(r.closingStock, 10) || 0) * (parseFloat(r.bottleRate) || 0)).toFixed(2))
@@ -509,7 +658,7 @@ const saveDailyStockSheet = async (req, res, next) => {
       data: {
         businessDate,
         shopId,
-        totalRecords: savedRecords.length,
+        totalRecords: allDayRecords.length,
         totalOpening,
         totalIndent,
         totalAvailable,

@@ -1,5 +1,10 @@
 const prisma = require('../config/prisma');
 const { lockDailyStock, unlockDailyStock, getDailyStockTotals } = require('../services/inventory.service');
+const {
+  parsePaginationParams,
+  buildSortClause,
+  buildPaginationMetadata
+} = require('../utils/pagination.util');
 
 // GET /api/sales/closing/status?date=YYYY-MM-DD
 const getClosingStatus = async (req, res, next) => {
@@ -284,11 +289,11 @@ const reopenClosing = async (req, res, next) => {
 };
 
 // GET /api/sales/closing/history
-// List historical daily closing summaries for active shop with date filters
+// List historical daily closing summaries for active shop with date filters, search, sorting & pagination
 const getClosingHistory = async (req, res, next) => {
   try {
     const shopId = req.headers['x-shop-id'] || req.query.shopId;
-    const { fromDate, toDate } = req.query;
+    const { fromDate, toDate, status, search, sortBy, sortOrder } = req.query;
 
     if (!shopId) {
       return res.status(400).json({
@@ -308,15 +313,64 @@ const getClosingHistory = async (req, res, next) => {
       where.businessDate = { gte: new Date(`${fromDate}T00:00:00.000Z`) };
     }
 
-    const history = await prisma.dailyClosing.findMany({
-      where,
-      orderBy: { businessDate: 'desc' }
+    if (status && status !== 'all') {
+      where.status = status.trim().toUpperCase();
+    }
+
+    if (search && search.trim()) {
+      const term = search.trim();
+      where.OR = [
+        { notes: { contains: term, mode: 'insensitive' } },
+        { closedBy: { contains: term, mode: 'insensitive' } }
+      ];
+    }
+
+    const isExplicitlyPaginated = req.query.page !== undefined || req.query.limit !== undefined || req.query.paginate === 'true';
+    const pagination = parsePaginationParams(req.query);
+
+    const orderBy = buildSortClause({
+      sortBy,
+      sortOrder,
+      allowedFields: ['businessDate', 'totalBusiness', 'finalAmount', 'status', 'createdAt'],
+      defaultSortBy: 'businessDate',
+      defaultSortOrder: 'desc',
+      tieBreaker: 'id'
     });
+
+    let totalRecords;
+    let history;
+
+    if (isExplicitlyPaginated && pagination.isPaginated) {
+      [totalRecords, history] = await prisma.$transaction([
+        prisma.dailyClosing.count({ where }),
+        prisma.dailyClosing.findMany({
+          where,
+          orderBy,
+          skip: pagination.skip,
+          take: pagination.take
+        })
+      ]);
+    } else {
+      history = await prisma.dailyClosing.findMany({
+        where,
+        orderBy
+      });
+      totalRecords = history.length;
+    }
+
+    const paginationMetadata = buildPaginationMetadata(
+      totalRecords,
+      pagination.page,
+      pagination.limit
+    );
 
     return res.status(200).json({
       success: true,
       message: 'Closing history retrieved successfully',
-      data: { history }
+      data: {
+        history,
+        pagination: paginationMetadata
+      }
     });
   } catch (error) {
     next(error);

@@ -172,15 +172,18 @@ const generateDailyStockPdf = (data, stream) => {
     tableY += 16;
   });
 
-  // Totals Row
-  if (tableY > 480) {
+  // Totals Row (Totals Grid)
+  if (tableY > 460) {
     doc.addPage();
-    tableY = 30;
+    tableY = drawTableHeader(30);
   }
 
-  doc.rect(30, tableY, 782, 22).fill('#334155');
+  doc.rect(30, tableY, 782, 22).fill('#0f172a');
+  doc.rect(30, tableY, 782, 1.5).fill('#334155');
+  doc.rect(30, tableY + 21, 782, 1.5).fill('#334155');
+
   doc.fillColor('#ffffff').fontSize(7.5).font('Helvetica-Bold');
-  doc.text('TOTALS', 35, tableY + 6, { width: 210, align: 'left' });
+  doc.text('DAILY TOTALS', 35, tableY + 6, { width: 210, align: 'left' });
   doc.text(formatNumber(totalOpening), 248, tableY + 6, { width: 36, align: 'right' });
   doc.text(formatNumber(totalIndent), 286, tableY + 6, { width: 36, align: 'right' });
   doc.text(formatNumber(totalStock), 324, tableY + 6, { width: 36, align: 'right' });
@@ -200,15 +203,25 @@ const generateDailyStockPdf = (data, stream) => {
     ? (isReconciled ? `RECONCILIATION VERIFIED: Stock Value (${formatINR(totalStockValue)}) = Sales (${formatINR(totalAmount)}) + Remaining Stock (${formatINR(totalRemainingStockValue)})` : 'RECONCILIATION DISCREPANCY DETECTED')
     : 'RECONCILIATION PENDING: Full reconciliation will verify once all closing counts are entered';
 
-  doc.rect(30, tableY, 782, 54).fill('#f1f5f9');
+  const combinedTotal = totalAmount + totalExtra;
+
+  if (tableY > 460) {
+    doc.addPage();
+    tableY = 30;
+  }
+
+  doc.rect(30, tableY, 782, 68).fill('#f8fafc');
+  doc.rect(30, tableY, 782, 68).stroke('#cbd5e1');
   doc.fillColor('#0f172a').fontSize(8.5).font('Helvetica-Bold')
-     .text(`Total Stock Value: ${formatINR(totalStockValue)}  |  Total Sales: ${formatINR(totalAmount)}  |  Remaining Stock Value: ${formatINR(totalRemainingStockValue)}`, 40, tableY + 6);
+     .text(`Total Stock Value: ${formatINR(totalStockValue)}  |  Total Sales Amount: ${formatINR(totalAmount)}  |  Remaining Stock Value: ${formatINR(totalRemainingStockValue)}`, 40, tableY + 6);
   doc.fillColor(isReconciled ? '#059669' : '#b45309').fontSize(8).font('Helvetica-Bold')
-     .text(reconcileText, 40, tableY + 20);
+     .text(reconcileText, 40, tableY + 19);
+  doc.fillColor('#1e293b').fontSize(8).font('Helvetica-Bold')
+     .text(`Sales & Extra Amount Breakdown: Sales Amount (${formatINR(totalAmount)}) + Extra Total Amount (${formatINR(totalExtra)}) = Combined Total Amount (${formatINR(combinedTotal)})`, 40, tableY + 32);
   doc.fillColor('#334155').fontSize(7.5).font('Helvetica')
-     .text(`Available Bottles: ${formatNumber(totalStock)}  |  Sold: ${formatNumber(totalSale)}  |  Closing: ${formatNumber(totalClosing)}  |  Extra Amount (Info Only): ${formatINR(totalExtra)}`, 40, tableY + 32);
-  doc.fillColor('#64748b').fontSize(7).font('Helvetica')
-     .text('* IMPORTANT: Stock Value and Remaining Stock Value are inventory asset valuations, not revenue. Sales Amount represents actual revenue. Extra Amount is excluded from all reconciliations.', 40, tableY + 44);
+     .text(`Available Bottles: ${formatNumber(totalStock)}  |  Sold: ${formatNumber(totalSale)}  |  Closing: ${formatNumber(totalClosing)}  |  Extra Amount (Tracked Separately): ${formatINR(totalExtra)}`, 40, tableY + 45);
+  doc.fillColor('#64748b').fontSize(7).font('Helvetica-Oblique')
+     .text('* NOTE: Sales Amount represents official daily gross revenue. Extra Amount is recorded separately and strictly excluded from official closing revenue & collections. Stock Value and Remaining Stock Value are inventory asset valuations.', 40, tableY + 56);
 
   // Page numbering in footer
   const pages = doc.bufferedPageRange();

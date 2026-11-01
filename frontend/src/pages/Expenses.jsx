@@ -12,8 +12,15 @@ import {
   AlertCircle, 
   CheckCircle2, 
   User, 
-  CreditCard 
+  CreditCard,
+  Search,
+  Filter,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
+import Pagination from '../components/Pagination';
+import usePagination from '../hooks/usePagination';
 
 const Expenses = () => {
   const { selectedShop } = useAuth();
@@ -22,6 +29,7 @@ const Expenses = () => {
   const [expenses, setExpenses] = useState([]);
   const [totalAmount, setTotalAmount] = useState('0.00');
   const [loading, setLoading] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   // Form State
   const [category, setCategory] = useState('MISC');
@@ -34,27 +42,69 @@ const Expenses = () => {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  const {
+    page,
+    setPage,
+    limit,
+    setLimit,
+    sortBy,
+    sortOrder,
+    handleSort,
+    search,
+    setSearch,
+    debouncedSearch,
+    paginationParams,
+    getNextRequestId,
+    isCurrentRequest
+  } = usePagination({
+    initialPage: 1,
+    initialLimit: 25,
+    initialSortBy: 'createdAt',
+    initialSortOrder: 'desc'
+  });
+
+  const [paginationMeta, setPaginationMeta] = useState({
+    page: 1,
+    limit: 25,
+    totalRecords: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false
+  });
+
   const fetchExpenses = async () => {
     if (!selectedShop) return;
     setLoading(true);
+    const reqId = getNextRequestId();
     try {
-      const res = await apiClient.get('/sales/expenses', {
-        params: { date: businessDate }
-      });
-      if (res.success) {
+      const params = {
+        ...paginationParams,
+        date: businessDate
+      };
+      if (categoryFilter !== 'all') {
+        params.category = categoryFilter;
+      }
+
+      const res = await apiClient.get('/sales/expenses', { params });
+      if (isCurrentRequest(reqId) && res.success) {
         setExpenses(res.data.expenses || []);
         setTotalAmount(res.data.totalExpenseAmount || '0.00');
+        if (res.data.pagination) {
+          setPaginationMeta(res.data.pagination);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch expenses:', err);
     } finally {
-      setLoading(false);
+      if (isCurrentRequest(reqId)) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     fetchExpenses();
-  }, [businessDate, selectedShop?.id]);
+  }, [businessDate, selectedShop?.id, debouncedSearch, categoryFilter, page, limit, sortBy, sortOrder]);
 
   const handleAddExpense = async (e) => {
     e.preventDefault();
@@ -232,11 +282,47 @@ const Expenses = () => {
           </form>
         </div>
 
+        {/* Search & Category Filter Controls */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search expenses by description, recipient, or category..."
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2 text-slate-900 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus-theme"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+            <select
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setPage(1);
+              }}
+              className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 text-xs font-medium focus:outline-none focus-theme cursor-pointer"
+            >
+              <option value="all">All Categories</option>
+              <option value="MISC">Misc</option>
+              <option value="SALARY">Salary / Staff</option>
+              <option value="RENT">Rent / Lease</option>
+              <option value="UTILITY">Electricity / Water</option>
+              <option value="TRANSPORT">Freight / Transport</option>
+              <option value="MAINTENANCE">Maintenance</option>
+              <option value="TEA_SNACKS">Tea & Snacks</option>
+              <option value="GOVT_FEE">Govt / License Fees</option>
+            </select>
+          </div>
+        </div>
+
         {/* Expenses List */}
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
           <div className="p-3.5 sm:p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
             <h2 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider">
-              Itemized Expenses ({expenses.length})
+              Itemized Expenses ({paginationMeta.totalRecords})
             </h2>
             <div className="text-xs sm:text-sm font-mono font-bold text-rose-600">
               Total: ₹{totalAmount}
@@ -247,7 +333,7 @@ const Expenses = () => {
             <div className="p-8 text-center text-slate-500 text-xs">Loading expenses...</div>
           ) : expenses.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-xs">
-              No expenses recorded for {businessDate}.
+              No expenses recorded matching the current filter.
             </div>
           ) : (
             <>
@@ -299,11 +385,35 @@ const Expenses = () => {
                 <table className="table-grid">
                   <thead>
                     <tr>
-                      <th className="w-32">Category</th>
+                      <th 
+                        className="w-32 cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('category')}
+                      >
+                        <div className="inline-flex items-center gap-1">
+                          <span>Category</span>
+                          {sortBy === 'category' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
                       <th>Description</th>
                       <th className="w-36">Recipient</th>
                       <th className="w-28 text-center">Payment</th>
-                      <th className="w-32 text-right">Amount</th>
+                      <th 
+                        className="w-32 text-right cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('amount')}
+                      >
+                        <div className="inline-flex items-center justify-end gap-1">
+                          <span>Amount</span>
+                          {sortBy === 'amount' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
                       <th className="w-20 text-center">Action</th>
                     </tr>
                   </thead>
@@ -342,6 +452,14 @@ const Expenses = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Server-Side Pagination Footer */}
+              <Pagination
+                pagination={paginationMeta}
+                onPageChange={setPage}
+                onLimitChange={setLimit}
+                disabled={loading}
+              />
             </>
           )}
         </div>

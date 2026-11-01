@@ -2,8 +2,21 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import apiClient from '../api/client';
 import { Link } from 'react-router-dom';
-import { Box, Search, Eye, Barcode, AlertTriangle, Trash2, Plus } from 'lucide-react';
+import { 
+  Box, 
+  Search, 
+  Eye, 
+  Barcode, 
+  AlertTriangle, 
+  Trash2, 
+  Plus,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
+} from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import Pagination from '../components/Pagination';
+import usePagination from '../hooks/usePagination';
 
 const StockList = () => {
   const { activeTheme } = useTheme();
@@ -13,23 +26,59 @@ const StockList = () => {
   const [searchedBottle, setSearchedBottle] = useState(null);
   const [serialError, setSerialError] = useState('');
 
+  const {
+    page,
+    setPage,
+    limit,
+    setLimit,
+    sortBy,
+    sortOrder,
+    handleSort,
+    search,
+    setSearch,
+    debouncedSearch,
+    paginationParams,
+    getNextRequestId,
+    isCurrentRequest
+  } = usePagination({
+    initialPage: 1,
+    initialLimit: 25,
+    initialSortBy: 'createdAt',
+    initialSortOrder: 'desc'
+  });
+
+  const [paginationMeta, setPaginationMeta] = useState({
+    page: 1,
+    limit: 25,
+    totalRecords: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false
+  });
+
   const fetchStockEntries = async () => {
     setLoading(true);
+    const reqId = getNextRequestId();
     try {
-      const res = await apiClient.get('/inventory/stock/entries');
-      if (res.success) {
+      const res = await apiClient.get('/inventory/stock/entries', { params: paginationParams });
+      if (isCurrentRequest(reqId) && res.success) {
         setEntries(res.data.stockEntries || []);
+        if (res.data.pagination) {
+          setPaginationMeta(res.data.pagination);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch stock entries:', err);
     } finally {
-      setLoading(false);
+      if (isCurrentRequest(reqId)) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     fetchStockEntries();
-  }, []);
+  }, [debouncedSearch, page, limit, sortBy, sortOrder]);
 
   const handleDelete = async (entry) => {
     if (!window.confirm(`Are you sure you want to cancel and delete stock entry for '${entry.product?.name}' (${entry.totalBottles} bottles)?`)) {
@@ -144,7 +193,7 @@ const StockList = () => {
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
           <div className="p-3.5 sm:p-4 border-b border-slate-200 bg-slate-50">
             <h2 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider">
-              Stock Entry Batches ({entries.length})
+              Stock Entry Batches ({paginationMeta.totalRecords})
             </h2>
           </div>
 
@@ -215,9 +264,33 @@ const StockList = () => {
                       <th className="w-40">Brand</th>
                       <th className="w-20 text-center">Boxes</th>
                       <th className="w-24 text-center">Bottles/Box</th>
-                      <th className="w-28 text-center">Total Bottles</th>
+                      <th 
+                        className="w-32 text-center cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('totalBottles')}
+                      >
+                        <div className="inline-flex items-center justify-center gap-1">
+                          <span>Total Bottles</span>
+                          {sortBy === 'totalBottles' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
                       <th className="w-28 text-right">Box Price</th>
-                      <th className="w-28 text-right">Date</th>
+                      <th 
+                        className="w-32 text-right cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('createdAt')}
+                      >
+                        <div className="inline-flex items-center justify-end gap-1">
+                          <span>Date</span>
+                          {sortBy === 'createdAt' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
                       <th className="w-36 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -254,6 +327,14 @@ const StockList = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Server-Side Pagination Footer */}
+              <Pagination
+                pagination={paginationMeta}
+                onPageChange={setPage}
+                onLimitChange={setLimit}
+                disabled={loading}
+              />
             </>
           )}
         </div>

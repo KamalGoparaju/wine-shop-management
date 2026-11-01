@@ -14,15 +14,19 @@ import {
   Info,
   ShieldAlert,
   ArrowRight,
-  X
+  X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import Pagination from '../components/Pagination';
+import usePagination from '../hooks/usePagination';
 
 const Sizes = () => {
   const { activeTheme } = useTheme();
   const [sizes, setSizes] = useState([]);
-  const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'inactive'
   const [loading, setLoading] = useState(true);
   
@@ -45,32 +49,71 @@ const Sizes = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  const {
+    page,
+    setPage,
+    limit,
+    setLimit,
+    sortBy,
+    sortOrder,
+    handleSort,
+    search,
+    setSearch,
+    debouncedSearch,
+    resetPage,
+    paginationParams,
+    getNextRequestId,
+    isCurrentRequest
+  } = usePagination({
+    initialPage: 1,
+    initialLimit: 25,
+    initialSortBy: 'volumeMl',
+    initialSortOrder: 'desc'
+  });
+
+  const [paginationMeta, setPaginationMeta] = useState({
+    page: 1,
+    limit: 25,
+    totalRecords: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false
+  });
+
   const fetchSizes = async () => {
     setLoading(true);
     setErrorMsg('');
+    const reqId = getNextRequestId();
     try {
       const params = {
-        includeInactive: 'true',
-        search: search.trim() || undefined
+        ...paginationParams,
+        includeInactive: 'true'
       };
       if (statusFilter === 'active') params.isActive = 'true';
       if (statusFilter === 'inactive') params.isActive = 'false';
 
       const res = await apiClient.get('/inventory/sizes', { params });
-      if (res.success) {
+      if (isCurrentRequest(reqId) && res.success) {
         setSizes(res.data.sizes || []);
+        if (res.data.pagination) {
+          setPaginationMeta(res.data.pagination);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch sizes:', err);
-      setErrorMsg(err?.message || 'Failed to load bottle sizes.');
+      if (isCurrentRequest(reqId)) {
+        setErrorMsg(err?.message || 'Failed to load bottle sizes.');
+      }
     } finally {
-      setLoading(false);
+      if (isCurrentRequest(reqId)) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     fetchSizes();
-  }, [search, statusFilter]);
+  }, [debouncedSearch, statusFilter, page, limit, sortBy, sortOrder]);
 
   const handleOpenCreate = () => {
     setEditingSize(null);
@@ -306,6 +349,12 @@ const Sizes = () => {
 
         {/* Sizes List Container */}
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+          <div className="p-3.5 sm:p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+            <h2 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider">
+              Bottle Sizes ({paginationMeta.totalRecords})
+            </h2>
+          </div>
+
           {loading ? (
             <div className="p-12 text-center text-slate-500 text-xs">Loading bottle sizes...</div>
           ) : sizes.length === 0 ? (
@@ -324,7 +373,7 @@ const Sizes = () => {
             <>
               {/* Mobile Size Cards (< md) */}
               <div className="md:hidden divide-y divide-slate-100 p-2 sm:p-3 space-y-2">
-                {sizes.map((s) => {
+                {sizes.map((s, idx) => {
                   const ratesCount = s._count?.rates || 0;
                   const stockCount = s._count?.dailyStockRecords || 0;
                   const isReferenced = ratesCount > 0 || stockCount > 0;
@@ -333,6 +382,9 @@ const Sizes = () => {
                     <div key={s.id} className="p-3.5 bg-slate-50/60 rounded-xl border border-slate-200 space-y-2.5">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-slate-700 bg-slate-200/60 px-2 py-0.5 rounded-lg border border-slate-300">
+                            #{(page - 1) * limit + idx + 1}
+                          </span>
                           <span
                             className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-mono font-bold border"
                             style={{
@@ -370,7 +422,7 @@ const Sizes = () => {
 
                       <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
                         <span 
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono border ${
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono border ${
                             isReferenced
                               ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                               : 'bg-slate-100 text-slate-500 border-slate-200'
@@ -411,12 +463,60 @@ const Sizes = () => {
                   <thead>
                     <tr>
                       <th className="w-16 text-center">S.No.</th>
-                      <th className="w-28 text-center">Code / Abbr</th>
-                      <th className="w-40">Display Name</th>
-                      <th className="w-24 text-right">Volume</th>
+                      <th 
+                        className="w-32 text-center cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('code')}
+                      >
+                        <div className="inline-flex items-center justify-center gap-1">
+                          <span>Code / Abbr</span>
+                          {sortBy === 'code' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="w-48 cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('name')}
+                      >
+                        <div className="inline-flex items-center gap-1">
+                          <span>Display Name</span>
+                          {sortBy === 'name' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="w-28 text-right cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('volumeMl')}
+                      >
+                        <div className="inline-flex items-center justify-end gap-1">
+                          <span>Volume</span>
+                          {sortBy === 'volumeMl' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
                       <th>Description</th>
                       <th className="w-36 text-center">Referenced In</th>
-                      <th className="w-28 text-center">Status</th>
+                      <th 
+                        className="w-28 text-center cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort('isActive')}
+                      >
+                        <div className="inline-flex items-center justify-center gap-1">
+                          <span>Status</span>
+                          {sortBy === 'isActive' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                          )}
+                        </div>
+                      </th>
                       <th className="w-24 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -429,7 +529,7 @@ const Sizes = () => {
                       return (
                         <tr key={s.id}>
                           <td className="text-center text-slate-500 font-mono">
-                            {idx + 1}
+                            {(page - 1) * limit + idx + 1}
                           </td>
                           <td className="text-center">
                             <span
@@ -517,6 +617,14 @@ const Sizes = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Server-Side Pagination Footer */}
+              <Pagination
+                pagination={paginationMeta}
+                onPageChange={setPage}
+                onLimitChange={setLimit}
+                disabled={loading}
+              />
             </>
           )}
         </div>

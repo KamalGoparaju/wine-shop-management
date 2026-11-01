@@ -187,8 +187,9 @@ const generateDailyStockExcel = async (data, res) => {
   });
 
   // 5. Daily Totals Row
+  // 5. Daily Totals Row (Totals Grid)
   const totalsRow = worksheet.addRow([
-    'TOTALS',
+    'DAILY TOTALS',
     '',
     '',
     '',
@@ -205,16 +206,22 @@ const generateDailyStockExcel = async (data, res) => {
     totalExtraAmount,
     allCompleted ? 'COMPLETED' : 'PENDING'
   ]);
-  totalsRow.height = 22;
+  totalsRow.height = 24;
 
-  totalsRow.eachCell((cell, colNumber) => {
+  worksheet.mergeCells(`A${totalsRow.number}:E${totalsRow.number}`);
+
+  totalsRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
     cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
     cell.border = {
       top: { style: 'medium', color: { argb: 'FF0F172A' } },
-      bottom: { style: 'double', color: { argb: 'FF0F172A' } }
+      bottom: { style: 'double', color: { argb: 'FF0F172A' } },
+      left: { style: 'thin', color: { argb: 'FF334155' } },
+      right: { style: 'thin', color: { argb: 'FF334155' } }
     };
-    if (colNumber >= 6 && colNumber <= 10) {
+    if (colNumber === 1) {
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    } else if (colNumber >= 6 && colNumber <= 10) {
       cell.alignment = { vertical: 'middle', horizontal: 'right' };
       cell.numFmt = '#,##0';
     } else if (colNumber >= 12 && colNumber <= 15) {
@@ -231,9 +238,10 @@ const generateDailyStockExcel = async (data, res) => {
   const summaryHeaderRow = worksheet.addRow(['EXECUTIVE STOCK & SALES VALUATION SUMMARY']);
   summaryHeaderRow.getCell(1).font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
   summaryHeaderRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
-  worksheet.mergeCells(`A${summaryHeaderRow.number}:D${summaryHeaderRow.number}`);
+  worksheet.mergeCells(`A${summaryHeaderRow.number}:F${summaryHeaderRow.number}`);
 
   const isReconciled = allCompleted && Math.abs(totalStockValue - (totalSalesAmount + totalRemainingStockValue)) < 0.05;
+  const combinedTotal = totalSalesAmount + totalExtraAmount;
 
   const summaryItems = [
     ['Total Opening Bottles:', totalOpening, '#,##0'],
@@ -242,22 +250,29 @@ const generateDailyStockExcel = async (data, res) => {
     ['Total Closing Bottles Remaining:', totalClosing, '#,##0'],
     ['Total Bottles Sold:', totalSale, '#,##0'],
     ['Total Available Stock Valuation (Total Qty × Rate):', totalStockValue, '₹#,##0.00'],
-    ['Total Daily Sales Amount (Bottles Sold × Rate):', totalSalesAmount, '₹#,##0.00'],
+    ['Total Daily Sales Amount (Revenue):', totalSalesAmount, '₹#,##0.00'],
     ['Total Remaining Stock Valuation (Closing Qty × Rate):', totalRemainingStockValue, '₹#,##0.00'],
     ['Reconciliation Identity (Stock Value = Sales + Remaining):', isReconciled ? 'VERIFIED (Exact Match)' : 'PENDING (Unentered Closings)', '@'],
-    ['Extra Amount Recorded (Informational Only):', totalExtraAmount, '₹#,##0.00']
+    ['Total Extra Amount (Recorded Separately):', totalExtraAmount, '₹#,##0.00'],
+    ['Combined Informational Total (Sales + Extra Amount):', combinedTotal, '₹#,##0.00'],
+    ['Sales & Extra Amount Breakdown Formula:', `Sales Amount (₹${totalSalesAmount.toFixed(2)}) + Extra Total Amount (₹${totalExtraAmount.toFixed(2)}) = Combined Total Amount (₹${combinedTotal.toFixed(2)})`, '@']
   ];
 
   summaryItems.forEach(([label, value, numFmt]) => {
-    const sRow = worksheet.addRow([label, value]);
-    worksheet.mergeCells(`A${sRow.number}:C${sRow.number}`);
+    const sRow = worksheet.addRow([label, '', '', '', value]);
+    worksheet.mergeCells(`A${sRow.number}:D${sRow.number}`);
+    worksheet.mergeCells(`E${sRow.number}:F${sRow.number}`);
     sRow.getCell(1).font = { name: 'Calibri', size: 9.5, bold: true, color: { argb: 'FF1E293B' } };
     sRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left' };
-    sRow.getCell(4).value = value;
-    const isSales = label.includes('Sales Amount');
+    sRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+
+    const isSales = label.includes('Sales Amount (Revenue)');
     const isRemaining = label.includes('Remaining Stock');
     const isReconcile = label.includes('Reconciliation');
-    sRow.getCell(4).font = {
+    const isCombined = label.includes('Combined Informational Total');
+
+    const valCell = sRow.getCell(5);
+    valCell.font = {
       name: 'Calibri',
       size: 10,
       bold: true,
@@ -265,17 +280,18 @@ const generateDailyStockExcel = async (data, res) => {
         ? { argb: 'FF059669' }
         : isRemaining
         ? { argb: 'FF4338CA' }
+        : isCombined
+        ? { argb: 'FF0F172A' }
         : isReconcile
         ? (isReconciled ? { argb: 'FF059669' } : { argb: 'FFD97706' })
         : { argb: 'FF1E293B' }
     };
-    sRow.getCell(4).numFmt = numFmt;
-    sRow.getCell(4).alignment = { vertical: 'middle', horizontal: isReconcile ? 'center' : 'right' };
-    sRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
-    sRow.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+    valCell.numFmt = numFmt;
+    valCell.alignment = { vertical: 'middle', horizontal: (isReconcile || typeof value === 'string') ? 'center' : 'right' };
+    valCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
   });
 
-  const noteRow = worksheet.addRow(['* Notice: Total Stock Value represents available inventory valuation before deducting sales. Total Sales Amount represents gross sales revenue. Total Remaining Stock Value represents inventory on hand at close. Total Stock Value = Total Sales Amount + Total Remaining Stock Value. Extra Amount is excluded from all financial reconciliations.']);
+  const noteRow = worksheet.addRow(['* Notice: Total Stock Value represents available inventory valuation before deducting sales. Total Sales Amount represents official daily gross sales revenue. Total Remaining Stock Value represents inventory on hand at close. Total Stock Value = Total Sales Amount + Total Remaining Stock Value. Extra Amount is recorded separately for tracking and strictly excluded from official closing revenue & collections.']);
   worksheet.mergeCells(`A${noteRow.number}:P${noteRow.number}`);
   noteRow.getCell(1).font = { name: 'Calibri', size: 8.5, italic: true, color: { argb: 'FF64748B' } };
 
