@@ -459,7 +459,16 @@ const DailyStock = () => {
   const totalSaleBottles = items.reduce((acc, curr) => acc + (parseInt(curr.saleCount, 10) || 0), 0);
   const totalStockValue = items.reduce((acc, curr) => acc + ((parseInt(curr.totalStock, 10) || 0) * (parseFloat(curr.bottleRate) || 0)), 0);
   const totalBusinessAmount = items.reduce((acc, curr) => acc + (parseFloat(curr.saleAmount) || 0), 0);
+  const totalRemainingStockValue = items.reduce((acc, curr) => {
+    const hasCl = curr.closingStock !== '' && curr.closingStock !== null && curr.closingStock !== undefined;
+    const cl = hasCl ? parseInt(curr.closingStock, 10) || 0 : 0;
+    const r = parseFloat(curr.bottleRate) || 0;
+    return acc + (hasCl ? cl * r : 0);
+  }, 0);
   const totalExtraAmount = items.reduce((acc, curr) => acc + (parseFloat(curr.extraAmount) || 0), 0);
+
+  const allRowsCompleted = items.length > 0 && incompleteCount === 0 && invalidRowsCount === 0;
+  const isReconciled = allRowsCompleted && Math.abs(totalStockValue - (totalBusinessAmount + totalRemainingStockValue)) < 0.05;
 
   return (
     <Layout title="Daily Stock Calculation Sheet">
@@ -639,7 +648,7 @@ const DailyStock = () => {
         )}
 
         {/* Quick KPI Stat Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3">
           <div className="bg-white border border-slate-200 p-2.5 sm:p-3 rounded-xl shadow-xs">
             <span className="text-[10px] font-bold uppercase text-slate-500">Total Opening</span>
             <p className="text-base sm:text-lg font-bold text-slate-900 font-mono mt-0.5 truncate">{totalOpening}</p>
@@ -673,13 +682,79 @@ const DailyStock = () => {
               ₹{totalStockValue.toFixed(2)}
             </p>
           </div>
-          <div className="bg-emerald-50/70 border border-emerald-200 p-2.5 sm:p-3 rounded-xl shadow-xs col-span-2 sm:col-span-1">
-            <span className="text-[10px] font-bold uppercase text-emerald-700">Total Business</span>
+          <div className="bg-emerald-50/70 border border-emerald-200 p-2.5 sm:p-3 rounded-xl shadow-xs">
+            <span className="text-[10px] font-bold uppercase text-emerald-700">Sales Amount</span>
             <p className="text-base sm:text-lg font-bold text-emerald-800 font-mono mt-0.5 truncate" title={`₹${totalBusinessAmount.toFixed(2)}`}>
               ₹{totalBusinessAmount.toFixed(2)}
             </p>
           </div>
+          <div className="bg-indigo-50/70 border border-indigo-200 p-2.5 sm:p-3 rounded-xl shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase text-indigo-700">Remaining Value</span>
+              {incompleteCount > 0 && (
+                <span className="text-[9px] text-amber-700 bg-amber-50 px-1 py-0.2 rounded font-sans border border-amber-200">
+                  Pending
+                </span>
+              )}
+            </div>
+            <p className="text-base sm:text-lg font-bold text-indigo-800 font-mono mt-0.5 truncate" title={`₹${totalRemainingStockValue.toFixed(2)}`}>
+              ₹{totalRemainingStockValue.toFixed(2)}
+            </p>
+          </div>
         </div>
+
+        {/* Stock Reconciliation Identity Banner */}
+        {items.length > 0 && (
+          <div className={`p-3 sm:p-3.5 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs transition-colors ${
+            isReconciled
+              ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950'
+              : incompleteCount > 0
+              ? 'bg-amber-50/90 border-amber-300 text-amber-950'
+              : 'bg-rose-50/90 border-rose-300 text-rose-950'
+          }`}>
+            <div className="flex items-center gap-2">
+              {isReconciled ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : incompleteCount > 0 ? (
+                <Info className="w-4 h-4 text-amber-600 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              )}
+              <div>
+                <span className="font-bold">
+                  {isReconciled
+                    ? 'Reconciliation Identity Verified:'
+                    : incompleteCount > 0
+                    ? 'Reconciliation Pending:'
+                    : 'Reconciliation Discrepancy:'}
+                </span>{' '}
+                {isReconciled ? (
+                  <span className="font-mono text-emerald-900">
+                    Total Stock Value (₹{totalStockValue.toFixed(2)}) = Sales Amount (₹{totalBusinessAmount.toFixed(2)}) + Remaining Stock Value (₹{totalRemainingStockValue.toFixed(2)})
+                  </span>
+                ) : incompleteCount > 0 ? (
+                  <span>
+                    Closing stock count is pending on <strong>{incompleteCount}</strong> brand row{incompleteCount === 1 ? '' : 's'}. Full reconciliation will verify once all closing entries are completed.
+                  </span>
+                ) : (
+                  <span className="font-mono text-rose-900">
+                    Total Stock Value (₹{totalStockValue.toFixed(2)}) does not equal Sales Amount (₹{totalBusinessAmount.toFixed(2)}) + Remaining Stock Value (₹{totalRemainingStockValue.toFixed(2)}).
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 uppercase tracking-wide border ${
+              isReconciled
+                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                : incompleteCount > 0
+                ? 'bg-amber-100 text-amber-800 border-amber-300'
+                : 'bg-rose-100 text-rose-800 border-rose-300'
+            }`}>
+              {isReconciled ? '✓ Reconciled' : incompleteCount > 0 ? `${incompleteCount} Pending` : 'Discrepancy'}
+            </span>
+          </div>
+        )}
 
         {/* View Mode Switcher and Row Header Strip */}
         <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2 px-1">
@@ -892,6 +967,20 @@ const DailyStock = () => {
                           </span>
                         </div>
                       </div>
+
+                      {/* Remaining Stock Value card item */}
+                      <div className="flex items-center justify-between bg-indigo-50/60 p-2 rounded-xl border border-indigo-100 text-xs">
+                        <span className="text-[10px] font-bold uppercase text-indigo-800 font-sans">
+                          Remaining Stock Value
+                        </span>
+                        <span className="font-bold font-mono text-indigo-700">
+                          {!isPendingClosing ? (
+                            `₹${((parseInt(row.closingStock, 10) || 0) * (parseFloat(row.bottleRate) || 0)).toFixed(2)}`
+                          ) : (
+                            <span className="text-amber-700 font-sans font-medium italic">Pending</span>
+                          )}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -902,7 +991,7 @@ const DailyStock = () => {
             <div className={`table-grid-wrapper ${
               viewMode === 'cards' ? 'hidden' : viewMode === 'table' ? 'block' : 'hidden md:block'
             }`}>
-              <table className="table-grid min-w-[840px]">
+              <table className="table-grid min-w-[960px]">
                 <thead className="sticky top-0 z-10">
                   <tr>
                     <th className="text-center w-12">S.No.</th>
@@ -916,6 +1005,7 @@ const DailyStock = () => {
                     <th className="text-right w-24">Rate</th>
                     <th className="text-right w-28 text-slate-700">Stock Value (₹)</th>
                     <th className="text-right w-28 text-emerald-700">Amount (₹)</th>
+                    <th className="text-right w-32 text-indigo-700">Remaining Stock Value (₹)</th>
                     <th className="text-right w-24 text-slate-500" title="Informational only; excluded from financial totals">
                       Extra Amt*
                     </th>
@@ -1004,6 +1094,15 @@ const DailyStock = () => {
                         <td className="text-right font-bold text-emerald-700 font-sans">
                           ₹{parseFloat(row.saleAmount || 0).toFixed(2)}
                         </td>
+                        <td className="text-right font-bold text-indigo-700 font-sans">
+                          {!isPendingClosing ? (
+                            `₹${((parseInt(row.closingStock, 10) || 0) * (parseFloat(row.bottleRate) || 0)).toFixed(2)}`
+                          ) : (
+                            <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-normal italic font-sans">
+                              Pending
+                            </span>
+                          )}
+                        </td>
                         <td className="text-right">
                           <input
                             type="number"
@@ -1037,6 +1136,9 @@ const DailyStock = () => {
                     </td>
                     <td className="text-right text-emerald-700 font-extrabold font-sans">
                       ₹{totalBusinessAmount.toFixed(2)}
+                    </td>
+                    <td className="text-right text-indigo-700 font-extrabold font-sans">
+                      ₹{totalRemainingStockValue.toFixed(2)}
                     </td>
                     <td className="text-right text-slate-500 text-xs font-sans">
                       ₹{totalExtraAmount.toFixed(2)}

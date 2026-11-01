@@ -32,9 +32,21 @@ const generateDailyStockCsv = (data) => {
     'Rate',
     'Stock Value',
     'Sales Amount',
+    'Remaining Stock Value',
     'Extra Amount',
     'Status'
   ];
+
+  let totalOpening = 0;
+  let totalIndent = 0;
+  let totalAvailable = 0;
+  let totalClosing = 0;
+  let totalSale = 0;
+  let totalStockValue = 0;
+  let totalSalesAmount = 0;
+  let totalRemainingStockValue = 0;
+  let totalExtra = 0;
+  let allCompleted = records.length > 0;
 
   const rows = records.map((r, idx) => {
     const brandName = (r.brand && r.brand.name) || r.brandName || `Item #${idx + 1}`;
@@ -44,12 +56,28 @@ const generateDailyStockCsv = (data) => {
     const opening = parseInt(r.openingStock, 10) || 0;
     const indent = parseInt(r.indentStock, 10) || 0;
     const total = parseInt(r.totalStock, 10) || (opening + indent);
-    const closing = parseInt(r.closingStock, 10) || 0;
+    const hasClosing = r.closingStock !== '' && r.closingStock !== null && r.closingStock !== undefined;
+    const closing = hasClosing ? (parseInt(r.closingStock, 10) || 0) : 0;
     const sale = parseInt(r.saleCount, 10) || 0;
     const rate = parseFloat(r.bottleRate) || 0;
     const stockValue = total * rate;
     const saleAmount = parseFloat(r.saleAmount) || (sale * rate);
+    const remainingStockValue = hasClosing ? (closing * rate) : null;
     const extra = parseFloat(r.extraAmount) || 0;
+
+    totalOpening += opening;
+    totalIndent += indent;
+    totalAvailable += total;
+    if (hasClosing) {
+      totalClosing += closing;
+      totalRemainingStockValue += remainingStockValue;
+    } else {
+      allCompleted = false;
+    }
+    totalSale += sale;
+    totalStockValue += stockValue;
+    totalSalesAmount += saleAmount;
+    totalExtra += extra;
 
     return [
       escapeCSV(shopCode),
@@ -60,17 +88,37 @@ const generateDailyStockCsv = (data) => {
       escapeCSV(opening),
       escapeCSV(indent),
       escapeCSV(total),
-      escapeCSV(closing),
+      escapeCSV(hasClosing ? closing : 'Pending'),
       escapeCSV(sale),
       escapeCSV(rate.toFixed(2)),
       escapeCSV(stockValue.toFixed(2)),
       escapeCSV(saleAmount.toFixed(2)),
+      escapeCSV(hasClosing ? remainingStockValue.toFixed(2) : 'Pending'),
       escapeCSV(extra.toFixed(2)),
       escapeCSV(r.status || 'DRAFT')
     ].join(',');
   });
 
-  return [headers.map(h => `"${h}"`).join(','), ...rows].join('\r\n');
+  const totalsRow = [
+    escapeCSV('TOTALS'),
+    escapeCSV(''),
+    escapeCSV(''),
+    escapeCSV(''),
+    escapeCSV(''),
+    escapeCSV(totalOpening),
+    escapeCSV(totalIndent),
+    escapeCSV(totalAvailable),
+    escapeCSV(totalClosing),
+    escapeCSV(totalSale),
+    escapeCSV(''),
+    escapeCSV(totalStockValue.toFixed(2)),
+    escapeCSV(totalSalesAmount.toFixed(2)),
+    escapeCSV(totalRemainingStockValue.toFixed(2)),
+    escapeCSV(totalExtra.toFixed(2)),
+    escapeCSV(allCompleted ? 'COMPLETED' : 'PENDING')
+  ].join(',');
+
+  return [headers.map(h => `"${h}"`).join(','), ...rows, totalsRow].join('\r\n');
 };
 
 module.exports = {

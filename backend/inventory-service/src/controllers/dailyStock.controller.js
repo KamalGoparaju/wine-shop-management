@@ -159,21 +159,24 @@ const getDailyStockSheet = async (req, res, next) => {
         }
       }
 
-      // Enrich records with calculated stockValue
+      // Enrich records with calculated stockValue and remainingStockValue
       const enrichedRecords = records.map(r => {
         const opening = parseInt(r.openingStock, 10) || 0;
         const indent = parseInt(r.indentStock, 10) || 0;
         const total = parseInt(r.totalStock, 10) || (opening + indent);
-        const closing = parseInt(r.closingStock, 10) || 0;
+        const hasClosing = r.closingStock !== '' && r.closingStock !== null && r.closingStock !== undefined;
+        const closing = hasClosing ? parseInt(r.closingStock, 10) || 0 : null;
         const sale = parseInt(r.saleCount, 10) || 0;
         const rate = parseFloat(r.bottleRate) || 0;
         const stockValue = total * rate;
         const saleAmount = parseFloat(r.saleAmount) || (sale * rate);
+        const remainingStockValue = hasClosing ? parseFloat((closing * rate).toFixed(2)) : null;
         return {
           ...r,
           totalStock: total,
           stockValue,
-          closingStockValue: closing * rate,
+          closingStockValue: remainingStockValue !== null ? remainingStockValue : 0,
+          remainingStockValue,
           saleAmount
         };
       });
@@ -185,7 +188,14 @@ const getDailyStockSheet = async (req, res, next) => {
       const totalSold = enrichedRecords.reduce((acc, r) => acc + (parseInt(r.saleCount, 10) || 0), 0);
       const totalStockValue = enrichedRecords.reduce((acc, r) => acc + (r.stockValue || 0), 0);
       const totalBusiness = enrichedRecords.reduce((acc, r) => acc + (parseFloat(r.saleAmount) || 0), 0);
+      const totalRemainingStockValue = enrichedRecords.reduce((acc, r) => acc + (r.remainingStockValue !== null ? r.remainingStockValue : 0), 0);
       const totalExtraAmount = enrichedRecords.reduce((acc, r) => acc + (parseFloat(r.extraAmount) || 0), 0);
+
+      const allCompleted = enrichedRecords.length > 0 && enrichedRecords.every(r => r.closingStock !== '' && r.closingStock !== null && r.closingStock !== undefined);
+      const isReconciled = allCompleted && Math.abs(totalStockValue - (totalBusiness + totalRemainingStockValue)) < 0.05;
+      const reconciliationStatus = allCompleted
+        ? (isReconciled ? 'VERIFIED' : 'DISCREPANCY')
+        : 'PENDING';
 
       return res.status(200).json({
         success: true,
@@ -204,6 +214,9 @@ const getDailyStockSheet = async (req, res, next) => {
             totalSold,
             totalStockValue: totalStockValue.toFixed(2),
             totalBusiness: totalBusiness.toFixed(2),
+            totalRemainingStockValue: totalRemainingStockValue.toFixed(2),
+            isReconciled,
+            reconciliationStatus,
             totalExtraAmount: totalExtraAmount.toFixed(2)
           },
           records: enrichedRecords
@@ -304,6 +317,7 @@ const getDailyStockSheet = async (req, res, next) => {
             totalStock: opening,
             stockValue,
             closingStockValue: 0,
+            remainingStockValue: null,
             // Unentered closing on new day is empty string to clearly distinguish incomplete records
             closingStock: '',
             saleCount: 0,
@@ -340,6 +354,9 @@ const getDailyStockSheet = async (req, res, next) => {
           totalSold: 0,
           totalStockValue: totalStockValue.toFixed(2),
           totalBusiness: '0.00',
+          totalRemainingStockValue: '0.00',
+          isReconciled: false,
+          reconciliationStatus: 'PENDING',
           totalExtraAmount: '0.00'
         },
         records: generatedItems
@@ -471,7 +488,20 @@ const saveDailyStockSheet = async (req, res, next) => {
     const totalSold = savedRecords.reduce((acc, r) => acc + (parseInt(r.saleCount, 10) || 0), 0);
     const totalStockValue = savedRecords.reduce((acc, r) => acc + ((parseInt(r.totalStock, 10) || 0) * (parseFloat(r.bottleRate) || 0)), 0);
     const totalBusiness = savedRecords.reduce((acc, r) => acc + (parseFloat(r.saleAmount) || 0), 0);
+    const totalRemainingStockValue = savedRecords.reduce((acc, r) => acc + ((parseInt(r.closingStock, 10) || 0) * (parseFloat(r.bottleRate) || 0)), 0);
     const totalExtraAmount = savedRecords.reduce((acc, r) => acc + (parseFloat(r.extraAmount) || 0), 0);
+
+    const allCompleted = savedRecords.length > 0 && status === 'COMPLETED';
+    const isReconciled = allCompleted && Math.abs(totalStockValue - (totalBusiness + totalRemainingStockValue)) < 0.05;
+    const reconciliationStatus = allCompleted
+      ? (isReconciled ? 'VERIFIED' : 'DISCREPANCY')
+      : 'PENDING';
+
+    const enrichedSavedRecords = savedRecords.map(r => ({
+      ...r,
+      stockValue: (parseInt(r.totalStock, 10) || 0) * (parseFloat(r.bottleRate) || 0),
+      remainingStockValue: parseFloat(((parseInt(r.closingStock, 10) || 0) * (parseFloat(r.bottleRate) || 0)).toFixed(2))
+    }));
 
     return res.status(200).json({
       success: true,
@@ -487,6 +517,9 @@ const saveDailyStockSheet = async (req, res, next) => {
         totalRemaining,
         totalStockValue: totalStockValue.toFixed(2),
         totalBusiness: totalBusiness.toFixed(2),
+        totalRemainingStockValue: totalRemainingStockValue.toFixed(2),
+        isReconciled,
+        reconciliationStatus,
         totalExtraAmount: totalExtraAmount.toFixed(2),
         summary: {
           totalOpening,
@@ -496,9 +529,12 @@ const saveDailyStockSheet = async (req, res, next) => {
           totalSold,
           totalStockValue: totalStockValue.toFixed(2),
           totalBusiness: totalBusiness.toFixed(2),
+          totalRemainingStockValue: totalRemainingStockValue.toFixed(2),
+          isReconciled,
+          reconciliationStatus,
           totalExtraAmount: totalExtraAmount.toFixed(2)
         },
-        records: savedRecords
+        records: enrichedSavedRecords
       }
     });
   } catch (error) {
