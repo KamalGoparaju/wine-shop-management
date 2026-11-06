@@ -43,6 +43,7 @@ const DailyStockImportModal = ({
   const [stagedRows, setStagedRows] = useState([]);
   const [masterBrands, setMasterBrands] = useState([]);
   const [masterSizes, setMasterSizes] = useState([]);
+  const [masterRates, setMasterRates] = useState([]);
   const [existingRecordCount, setExistingRecordCount] = useState(0);
 
   // Filter, Search & Pagination in Preview
@@ -123,6 +124,7 @@ const DailyStockImportModal = ({
         setStagedRows(response.data.rows || []);
         setMasterBrands(response.data.masterData?.brands || []);
         setMasterSizes(response.data.masterData?.sizes || []);
+        setMasterRates(response.data.masterData?.rates || []);
         setExistingRecordCount(response.data.existingRecordCount || 0);
         setCurrentStep(2); // Advance to preview
       } else {
@@ -148,12 +150,27 @@ const DailyStockImportModal = ({
         if (field === 'brandId') {
           const brandObj = masterBrands.find(b => b.id === value);
           updated.brandName = brandObj ? brandObj.name : '';
+          // Brand Change Behavior:
+          // Clear previously selected size and rate, requiring selecting from new brand's sizes
+          updated.sizeId = '';
+          updated.sizeCode = '';
+          updated.bottleRate = 0;
         }
 
-        // Recalculate size if selected from dropdown
+        // Recalculate size if selected from dropdown and automatically fetch rate
         if (field === 'sizeId') {
+          const brandObj = masterBrands.find(b => b.id === updated.brandId);
+          const configuredSize = brandObj?.configuredSizes?.find(cs => (cs.sizeId === value || cs.id === value));
           const sizeObj = masterSizes.find(s => s.id === value);
-          updated.sizeCode = sizeObj ? sizeObj.code : '';
+          updated.sizeCode = sizeObj ? sizeObj.code : (configuredSize?.code || '');
+
+          // Automatic Rate Fetching
+          if (configuredSize && configuredSize.rate !== undefined && configuredSize.rate > 0) {
+            updated.bottleRate = configuredSize.rate;
+          } else {
+            const matchingRate = masterRates?.find(mr => mr.brandId === updated.brandId && mr.sizeId === value);
+            updated.bottleRate = matchingRate ? matchingRate.rate : 0;
+          }
         }
 
         // Parse numerical values
@@ -161,12 +178,13 @@ const DailyStockImportModal = ({
         const indent = Math.max(0, parseInt(updated.indentStock, 10) || 0);
         const closing = Math.max(0, parseInt(updated.closingStock, 10) || 0);
         const rate = parseFloat(updated.bottleRate) || 0;
-        const extra = parseFloat(updated.extraAmount) || 0;
+        const extraPerBottle = parseFloat(updated.extraPerBottle) || 0;
 
         const total = opening + indent;
         const sale = Math.max(0, total - closing);
         const stockValue = parseFloat((total * rate).toFixed(2));
         const saleAmount = parseFloat((sale * rate).toFixed(2));
+        const extraAmount = extraPerBottle > 0 ? parseFloat((sale * extraPerBottle).toFixed(2)) : (parseFloat(updated.extraAmount) || 0);
 
         updated.openingStock = opening;
         updated.indentStock = indent;
@@ -176,7 +194,8 @@ const DailyStockImportModal = ({
         updated.bottleRate = rate;
         updated.stockValue = stockValue;
         updated.saleAmount = saleAmount;
-        updated.extraAmount = extra;
+        updated.extraPerBottle = extraPerBottle;
+        updated.extraAmount = extraAmount;
 
         // Validation rule check
         const issues = [];
@@ -201,16 +220,14 @@ const DailyStockImportModal = ({
   };
 
   const handleAddNewRow = () => {
-    const defaultBrand = masterBrands[0] || null;
-    const defaultSize = masterSizes[0] || null;
     const newRow = {
       id: `manual_${Date.now()}`,
       sourceFileName: 'Manual Entry',
       sourcePageIndex: 1,
-      brandId: defaultBrand ? defaultBrand.id : '',
-      brandName: defaultBrand ? defaultBrand.name : '',
-      sizeId: defaultSize ? defaultSize.id : '',
-      sizeCode: defaultSize ? defaultSize.code : '',
+      brandId: '',
+      brandName: '',
+      sizeId: '',
+      sizeCode: '',
       openingStock: 0,
       indentStock: 0,
       totalStock: 0,
@@ -219,9 +236,10 @@ const DailyStockImportModal = ({
       bottleRate: 0,
       stockValue: 0,
       saleAmount: 0,
+      extraPerBottle: 0,
       extraAmount: 0,
-      status: defaultBrand && defaultSize ? 'VERIFIED' : 'NEEDS_REVIEW',
-      validationIssues: []
+      status: 'NEEDS_REVIEW',
+      validationIssues: ['Please select a valid Brand', 'Please select a valid Size']
     };
     setStagedRows(prev => [newRow, ...prev]);
   };
@@ -651,6 +669,7 @@ const DailyStockImportModal = ({
                         <th className="w-16 text-right">Rate</th>
                         <th className="w-20 text-right">Stock Value</th>
                         <th className="w-20 text-right">Amount</th>
+                        <th className="w-16 text-right">Extra/Btl</th>
                         <th className="w-16 text-right">Extra Amt</th>
                         <th className="w-16 text-center">Status</th>
                         <th className="w-8 text-center"></th>
@@ -659,7 +678,7 @@ const DailyStockImportModal = ({
                     <tbody>
                       {paginatedRows.length === 0 ? (
                         <tr>
-                          <td colSpan={14} className="text-center py-6 text-slate-400 italic">
+                          <td colSpan={15} className="text-center py-6 text-slate-400 italic">
                             No records match the current filter.
                           </td>
                         </tr>
@@ -699,24 +718,48 @@ const DailyStockImportModal = ({
                                 )}
                               </td>
 
-                              {/* Size Selector */}
+                              {/* Size Selector - Brand Specific */}
                               <td>
-                                {masterSizes.length > 0 ? (
-                                  <select
-                                    value={row.sizeId || ''}
-                                    onChange={(e) => handleRowChange(row.id, 'sizeId', e.target.value)}
-                                    className={`w-full px-1 py-1 text-xs rounded border ${
-                                      !row.sizeId ? 'border-amber-400 bg-amber-50 text-amber-900 font-semibold' : 'border-slate-200 bg-white'
-                                    } focus:outline-none focus:ring-1 focus:ring-emerald-500`}
-                                  >
-                                    <option value="">-- Size --</option>
-                                    {masterSizes.map(s => (
-                                      <option key={s.id} value={s.id}>{s.code}</option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <span className="font-mono text-slate-600">{row.sizeCode || row.rawSize}</span>
-                                )}
+                                {(() => {
+                                  const selectedBrand = masterBrands.find(b => b.id === row.brandId);
+                                  const applicableSizes = selectedBrand?.configuredSizes || [];
+
+                                  if (!row.brandId) {
+                                    return (
+                                      <select
+                                        disabled
+                                        className="w-full px-1 py-1 text-xs rounded border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed font-sans"
+                                      >
+                                        <option value="">-- Choose Brand First --</option>
+                                      </select>
+                                    );
+                                  }
+
+                                  if (applicableSizes.length === 0) {
+                                    return (
+                                      <span className="text-[10px] text-rose-600 bg-rose-50 border border-rose-200 px-1 py-0.5 rounded font-semibold block text-center" title="No sizes configured for this brand in Brand Management">
+                                        No Sizes Configured
+                                      </span>
+                                    );
+                                  }
+
+                                  return (
+                                    <select
+                                      value={row.sizeId || ''}
+                                      onChange={(e) => handleRowChange(row.id, 'sizeId', e.target.value)}
+                                      className={`w-full px-1 py-1 text-xs rounded border ${
+                                        !row.sizeId ? 'border-amber-400 bg-amber-50 text-amber-900 font-semibold' : 'border-slate-200 bg-white'
+                                      } focus:outline-none focus:ring-1 focus:ring-emerald-500 font-sans`}
+                                    >
+                                      <option value="">-- Size --</option>
+                                      {applicableSizes.map(s => (
+                                        <option key={s.sizeId || s.id} value={s.sizeId || s.id}>
+                                          {s.code || s.name} (₹{s.rate})
+                                        </option>
+                                      ))}
+                                    </select>
+                                  );
+                                })()}
                               </td>
 
                               {/* Opening */}
@@ -788,16 +831,23 @@ const DailyStockImportModal = ({
                                 ₹{row.saleAmount?.toFixed(2)}
                               </td>
 
-                              {/* Extra Amount */}
+                              {/* Extra Per Bottle (Input) */}
                               <td className="text-right">
                                 <input
                                   type="number"
                                   step="0.01"
-                                  value={row.extraAmount}
-                                  onChange={(e) => handleRowChange(row.id, 'extraAmount', e.target.value)}
+                                  min="0"
+                                  value={row.extraPerBottle ?? ''}
+                                  onChange={(e) => handleRowChange(row.id, 'extraPerBottle', e.target.value)}
                                   className="w-16 px-1.5 py-0.5 text-right font-mono text-xs rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                                  title="Informational only (excluded from total business)"
+                                  placeholder="0.00"
+                                  title="Extra charge per bottle"
                                 />
+                              </td>
+
+                              {/* Calculated Extra Amount (Read-only) */}
+                              <td className="text-right font-mono text-slate-600 text-xs" title="Informational only (excluded from total business)">
+                                ₹{parseFloat(row.extraAmount || 0).toFixed(2)}
                               </td>
 
                               {/* Status Chip */}

@@ -392,7 +392,8 @@ const analyzeStockFiles = async ({ files, shopId, activeBrands, activeSizes, act
     const sale = Math.max(0, total - closing);
     const stockValue = total * rate;
     const saleAmount = sale * rate;
-    const extraAmount = parseNumber(row.extraAmount, 0);
+    const extraPerBottle = parseNumber(row.extraPerBottle, 0);
+    const extraAmount = extraPerBottle > 0 ? (sale * extraPerBottle) : parseNumber(row.extraAmount, 0);
 
     // 5. Duplicate Detection
     const comboKey = matchedBrand && matchedSize ? `${matchedBrand.id}_${matchedSize.id}` : null;
@@ -438,6 +439,7 @@ const analyzeStockFiles = async ({ files, shopId, activeBrands, activeSizes, act
       bottleRate: rate,
       stockValue: parseFloat(stockValue.toFixed(2)),
       saleAmount: parseFloat(saleAmount.toFixed(2)),
+      extraPerBottle: parseFloat(extraPerBottle.toFixed(2)),
       extraAmount: parseFloat(extraAmount.toFixed(2)),
       status,
       validationIssues

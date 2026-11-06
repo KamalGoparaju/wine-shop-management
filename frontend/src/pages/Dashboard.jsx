@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Layout from '../components/Layout';
 import apiClient from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -248,6 +248,25 @@ const Dashboard = () => {
     }
   };
 
+  // Pre-calculate contiguous brand row spans for grouped table display
+  const brandRowSpans = useMemo(() => {
+    const spans = {};
+    dailyRecords.forEach((item, index) => {
+      const brandId = item.brandId || item.brand?.id;
+      const prevBrandId = index > 0 ? (dailyRecords[index - 1].brandId || dailyRecords[index - 1].brand?.id) : null;
+      if (index === 0 || prevBrandId !== brandId) {
+        let count = 1;
+        for (let j = index + 1; j < dailyRecords.length; j++) {
+          const nextBrandId = dailyRecords[j].brandId || dailyRecords[j].brand?.id;
+          if (nextBrandId === brandId) count++;
+          else break;
+        }
+        spans[index] = count;
+      }
+    });
+    return spans;
+  }, [dailyRecords]);
+
   return (
     <Layout title={`${selectedShop?.name || 'Shop'} — Daily Operations`}>
       <div className="space-y-4 sm:space-y-6">
@@ -305,18 +324,30 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* 10 Required Financial Summary Cards Grid */}
-        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
-          {/* 1. Total Business */}
+        {/* Financial Summary Cards Grid */}
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2.5 sm:gap-3.5">
+          {/* 1. Total Bottle Sales Amount */}
           <div className="bg-white border border-slate-200 p-3.5 sm:p-4 rounded-2xl shadow-xs hover:border-slate-300 transition-all">
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Total Business</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider">Bottle Sales Amount</span>
               <Coins className="w-4 h-4 text-emerald-600 shrink-0" />
             </div>
             <h3 className="text-base sm:text-lg font-bold text-emerald-700 font-mono truncate" title={`₹${totalBusiness.toFixed(2)}`}>
               ₹{totalBusiness.toFixed(2)}
             </h3>
-            <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">From daily stock sheet</p>
+            <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">Gross revenue (Grand Total)</p>
+          </div>
+
+          {/* Extra Amount Card (Informational) */}
+          <div className="bg-white border border-slate-200 p-3.5 sm:p-4 rounded-2xl shadow-xs hover:border-slate-300 transition-all">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Total Extra Amount</span>
+              <Coins className="w-4 h-4 text-slate-400 shrink-0" />
+            </div>
+            <h3 className="text-base sm:text-lg font-bold text-slate-800 font-mono truncate" title={`₹${totalExtraAmount.toFixed(2)}`}>
+              ₹{totalExtraAmount.toFixed(2)}
+            </h3>
+            <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">Separate • Excluded from totals</p>
           </div>
 
           {/* 2. Total Bottles Sold */}
@@ -525,8 +556,8 @@ const Dashboard = () => {
               <table className="table-grid min-w-[640px]">
                 <thead>
                   <tr>
-                    <th>Brand</th>
-                    <th className="text-center">Size</th>
+                    <th className="border-r border-slate-200">Brand</th>
+                    <th className="text-center border-r border-slate-200 w-16">Size</th>
                     <th className="text-center font-mono">Opening</th>
                     <th className="text-center font-mono">Indent</th>
                     <th className="text-center font-mono">Total</th>
@@ -537,21 +568,43 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="font-mono text-xs">
-                  {dailyRecords.map((r, i) => (
-                    <tr key={r.id || i}>
-                      <td className="font-sans font-bold text-slate-900 truncate max-w-[150px]">{r.brand?.name}</td>
-                      <td className="text-center font-bold" style={{ color: activeTheme.primary }}>{r.size?.code}</td>
-                      <td className="text-center text-slate-600">{r.openingStock}</td>
-                      <td className="text-center text-indigo-600 font-bold">{r.indentStock}</td>
-                      <td className="text-center font-bold text-slate-900">{r.totalStock}</td>
-                      <td className="text-center text-emerald-700 font-bold">{r.closingStock}</td>
-                      <td className="text-center font-bold" style={{ color: activeTheme.primary }}>{r.saleCount}</td>
-                      <td className="text-right text-slate-600">₹{r.bottleRate}</td>
-                      <td className="text-right font-bold text-emerald-700 font-sans">
-                        ₹{parseFloat(r.saleAmount).toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
+                  {dailyRecords.map((r, i) => {
+                    const span = brandRowSpans[i];
+                    const isFirstOfBrand = span !== undefined;
+                    const isLastOfBrand = (i === dailyRecords.length - 1) || ((dailyRecords[i + 1]?.brandId || dailyRecords[i + 1]?.brand?.id) !== (r.brandId || r.brand?.id));
+
+                    return (
+                      <tr 
+                        key={r.id || i}
+                        className={`hover:bg-slate-50/50 transition-colors ${
+                          isLastOfBrand ? 'border-b-2 border-slate-300' : 'border-b border-slate-100'
+                        }`}
+                      >
+                        {isFirstOfBrand && (
+                          <td 
+                            rowSpan={span}
+                            className="font-sans font-bold text-slate-900 align-middle border-r border-slate-200 bg-white px-3 max-w-[180px] truncate"
+                          >
+                            {r.brand?.name}
+                          </td>
+                        )}
+                        <td className="text-center font-bold border-r border-slate-200" style={{ color: activeTheme.primary }}>
+                          <span className="px-1.5 py-0.5 rounded bg-slate-50 border border-slate-200 text-xs">
+                            {r.size?.code}
+                          </span>
+                        </td>
+                        <td className="text-center text-slate-600">{r.openingStock}</td>
+                        <td className="text-center text-indigo-600 font-bold">{r.indentStock}</td>
+                        <td className="text-center font-bold text-slate-900">{r.totalStock}</td>
+                        <td className="text-center text-emerald-700 font-bold">{r.closingStock}</td>
+                        <td className="text-center font-bold" style={{ color: activeTheme.primary }}>{r.saleCount}</td>
+                        <td className="text-right text-slate-600">₹{r.bottleRate}</td>
+                        <td className="text-right font-bold text-emerald-700 font-sans">
+                          ₹{parseFloat(r.saleAmount).toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -19,19 +19,21 @@ test('Daily Stock CSV - Expected columns and headers', () => {
         saleCount: 8,
         bottleRate: 500,
         saleAmount: 4000,
-        extraAmount: 50,
+        extraPerBottle: 10,
+        extraAmount: 80,
         status: 'COMPLETED'
       }
     ]
   };
 
   const csv = generateDailyStockCsv(sampleData);
-  assert.ok(csv.includes('"Shop","Business Date","S.No","Brand","Size","Opening","Indent","Total Quantity","Closing","Sale","Rate","Stock Value","Sales Amount","Remaining Stock Value","Extra Amount","Status"'));
+  assert.ok(csv.includes('"Shop","Business Date","S.No","Brand","Size","Opening","Indent","Total Quantity","Closing","Sale","Rate","Stock Value","Bottle Sales Amount","Extra Per Bottle","Extra Amount","Remaining Stock Value","Status"'));
   assert.ok(csv.includes('"SHOP1"'));
   assert.ok(csv.includes('"Royal Stag"'));
-  assert.ok(csv.includes('"4000.00"')); // Sales Amount
+  assert.ok(csv.includes('"4000.00"')); // Bottle Sales Amount
+  assert.ok(csv.includes('"10.00"')); // Extra Per Bottle
+  assert.ok(csv.includes('"80.00"')); // Extra Amount (8 sale * 10 = 80)
   assert.ok(csv.includes('"3500.00"')); // Remaining Stock Value (7 * 500 = 3500)
-  assert.ok(csv.includes('"50.00"'));
   assert.ok(csv.includes('"COMPLETED"'));
   assert.ok(csv.includes('"TOTALS"'));
 });

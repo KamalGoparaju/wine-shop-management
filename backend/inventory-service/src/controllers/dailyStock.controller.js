@@ -147,6 +147,7 @@ const getDailyStockSheet = async (req, res, next) => {
               bottleRate: rate,
               stockValue: opening * rate,
               saleAmount: 0,
+              extraPerBottle: 0,
               extraAmount: 0,
               status: 'DRAFT',
               notes: '',
@@ -175,13 +176,19 @@ const getDailyStockSheet = async (req, res, next) => {
         const stockValue = total * rate;
         const saleAmount = parseFloat(r.saleAmount) || (sale * rate);
         const remainingStockValue = hasClosing ? parseFloat((closing * rate).toFixed(2)) : null;
+        const extraPerBottle = Math.max(0, parseFloat(r.extraPerBottle) || 0);
+        const extraAmount = extraPerBottle > 0
+          ? parseFloat((sale * extraPerBottle).toFixed(2))
+          : parseFloat(r.extraAmount) || 0;
         return {
           ...r,
           totalStock: total,
           stockValue,
           closingStockValue: remainingStockValue !== null ? remainingStockValue : 0,
           remainingStockValue,
-          saleAmount
+          saleAmount,
+          extraPerBottle,
+          extraAmount
         };
       });
 
@@ -329,8 +336,9 @@ const getDailyStockSheet = async (req, res, next) => {
         const key = `${brand.id}_${size.id}`;
         const hasPrevVal = previousClosingMap[key] !== undefined;
 
-        // Include size if brand has configured rate, prior closing, or no rates configured at all
-        if (rateMap[key] !== undefined || hasPrevVal || !brandConfigured) {
+        // If brand has configured rates, ONLY include its active configured sizes
+        // If brand has no rates configured yet, include available sizes as fallback
+        if (rateMap[key] !== undefined || !brandConfigured) {
           const opening = hasPrevVal ? previousClosingMap[key] : 0;
           const rate = rateMap[key] !== undefined ? rateMap[key] : 0;
           const stockValue = opening * rate;
@@ -354,6 +362,7 @@ const getDailyStockSheet = async (req, res, next) => {
             saleCount: 0,
             bottleRate: rate,
             saleAmount: 0,
+            extraPerBottle: 0,
             extraAmount: 0,
             status: 'DRAFT',
             notes: '',
@@ -472,11 +481,69 @@ const saveDailyStockSheet = async (req, res, next) => {
       where: { shopId, businessDate: targetDate }
     });
 
+    // Load master validation data: active brands, active sizes, active rates, and existing records for today
+    const [allActiveBrands, allActiveSizes, allActiveRates, todayExistingRecords] = await Promise.all([
+      prisma.brand.findMany({ where: { isActive: true } }),
+      prisma.size.findMany({ where: { isActive: true } }),
+      prisma.brandSizeRate.findMany({
+        where: {
+          isActive: true,
+          OR: [{ shopId }, { shopId: null }]
+        }
+      }),
+      prisma.dailyStockRecord.findMany({
+        where: { shopId, businessDate: targetDate },
+        select: { brandId: true, sizeId: true, bottleRate: true }
+      })
+    ]);
+
+    const activeBrandMap = new Map(allActiveBrands.map(b => [b.id, b]));
+    const activeSizeMap = new Map(allActiveSizes.map(s => [s.id, s]));
+    const activeRateMap = new Map();
+    for (const r of allActiveRates) {
+      const k = `${r.brandId}_${r.sizeId}`;
+      if (!activeRateMap.has(k) || r.shopId === shopId) {
+        activeRateMap.set(k, parseFloat(r.rate));
+      }
+    }
+    const todayExistingSet = new Set(todayExistingRecords.map(r => `${r.brandId}_${r.sizeId}`));
+
     // Validate and prepare upsert records
     const upsertOperations = [];
     const submittedKeys = new Set();
 
     for (const item of items) {
+      const brand = activeBrandMap.get(item.brandId);
+      if (!brand) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid or inactive Brand selected (ID: ${item.brandId})`,
+          error: 'INVALID_BRAND'
+        });
+      }
+
+      const size = activeSizeMap.get(item.sizeId);
+      if (!size) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid or inactive Size selected (ID: ${item.sizeId})`,
+          error: 'INVALID_SIZE'
+        });
+      }
+
+      const rateKey = `${item.brandId}_${item.sizeId}`;
+      const configuredRate = activeRateMap.get(rateKey);
+      const hasPriorTodayRecord = todayExistingSet.has(rateKey);
+
+      // Strict validation: Reject unconfigured Brand + Size combinations unless preserving prior draft on this date
+      if (configuredRate === undefined && !hasPriorTodayRecord) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid Brand and Size combination: Size '${size.code}' (${size.name}) is not configured for Brand '${brand.name}'.`,
+          error: 'INVALID_BRAND_SIZE_COMBINATION'
+        });
+      }
+
       const opening = Math.max(0, parseInt(item.openingStock, 10) || 0);
       const indent = Math.max(0, parseInt(item.indentStock, 10) || 0);
       const total = opening + indent;
@@ -485,15 +552,33 @@ const saveDailyStockSheet = async (req, res, next) => {
       if (closing > total) {
         return res.status(400).json({
           success: false,
-          message: `Closing stock (${closing}) cannot exceed Total stock (${total}) for Brand ${item.brand?.name || item.brandId}`,
+          message: `Closing stock (${closing}) cannot exceed Total stock (${total}) for Brand ${brand.name} (${size.code})`,
           error: 'INVALID_STOCK_QUANTITY'
         });
       }
 
+      // Authoritative rate resolution
+      const rate = configuredRate !== undefined
+        ? configuredRate
+        : Math.max(0, parseFloat(item.bottleRate) || 0);
+
+      if (status === 'COMPLETED' && rate <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Selling rate is missing or zero for Brand '${brand.name}' (${size.code}). Rates must be configured before finalizing daily closing.`,
+          error: 'RATE_MISSING'
+        });
+      }
+
       const sale = total - closing;
-      const rate = Math.max(0, parseFloat(item.bottleRate) || 0);
       const saleAmount = sale * rate;
-      const extraAmount = Math.max(0, parseFloat(item.extraAmount) || 0);
+      const extraPerBottle = Math.max(0, parseFloat(item.extraPerBottle) || 0);
+      let extraAmount = 0;
+      if (item.extraPerBottle !== undefined && item.extraPerBottle !== null) {
+        extraAmount = parseFloat((sale * extraPerBottle).toFixed(2));
+      } else {
+        extraAmount = Math.max(0, parseFloat(item.extraAmount) || 0);
+      }
 
       const recordData = {
         shopId,
@@ -507,6 +592,7 @@ const saveDailyStockSheet = async (req, res, next) => {
         saleCount: sale,
         bottleRate: rate,
         saleAmount,
+        extraPerBottle,
         extraAmount,
         status: status || 'DRAFT',
         notes: item.notes ? item.notes.trim() : null
@@ -535,8 +621,21 @@ const saveDailyStockSheet = async (req, res, next) => {
       const [allBrands, allSizes, allRates] = await Promise.all([
         prisma.brand.findMany({ where: { isActive: true } }),
         prisma.size.findMany({ where: { isActive: true } }),
-        prisma.rate.findMany({ where: { shopId, isActive: true } })
+        prisma.brandSizeRate.findMany({
+          where: {
+            isActive: true,
+            OR: [{ shopId }, { shopId: null }]
+          }
+        })
       ]);
+
+      const rateMap = {};
+      for (const r of allRates) {
+        const k = `${r.brandId}_${r.sizeId}`;
+        if (!rateMap[k] || r.shopId === shopId) {
+          rateMap[k] = parseFloat(r.rate);
+        }
+      }
 
       const previousRecordDay = await prisma.dailyStockRecord.findFirst({
         where: { shopId, businessDate: { lt: targetDate } },
@@ -554,43 +653,47 @@ const saveDailyStockSheet = async (req, res, next) => {
       }
 
       for (const brand of allBrands) {
+        const brandConfigured = Object.keys(rateMap).some(k => k.startsWith(`${brand.id}_`));
         for (const size of allSizes) {
           const key = `${brand.id}_${size.id}`;
           if (!submittedKeys.has(key)) {
             const prevClosing = previousRecordsMap.get(key);
-            const op = prevClosing !== undefined ? prevClosing : 0;
-            const shopRate = allRates.find(r => r.brandId === brand.id && r.sizeId === size.id);
-            const rate = shopRate ? parseFloat(shopRate.bottleRate) : (parseFloat(brand.baseBottlePrice) || 0);
+            const hasPrevVal = prevClosing !== undefined;
+            if (rateMap[key] !== undefined || hasPrevVal || !brandConfigured) {
+              const op = hasPrevVal ? prevClosing : 0;
+              const rate = rateMap[key] !== undefined ? rateMap[key] : 0;
 
-            upsertOperations.push(
-              prisma.dailyStockRecord.upsert({
-                where: {
-                  shopId_businessDate_brandId_sizeId: {
+              upsertOperations.push(
+                prisma.dailyStockRecord.upsert({
+                  where: {
+                    shopId_businessDate_brandId_sizeId: {
+                      shopId,
+                      businessDate: targetDate,
+                      brandId: brand.id,
+                      sizeId: size.id
+                    }
+                  },
+                  update: {},
+                  create: {
                     shopId,
                     businessDate: targetDate,
                     brandId: brand.id,
-                    sizeId: size.id
+                    sizeId: size.id,
+                    openingStock: op,
+                    indentStock: 0,
+                    totalStock: op,
+                    closingStock: 0,
+                    saleCount: 0,
+                    bottleRate: rate,
+                    saleAmount: 0,
+                    extraPerBottle: 0,
+                    extraAmount: 0,
+                    status: 'DRAFT',
+                    notes: null
                   }
-                },
-                update: {},
-                create: {
-                  shopId,
-                  businessDate: targetDate,
-                  brandId: brand.id,
-                  sizeId: size.id,
-                  openingStock: op,
-                  indentStock: 0,
-                  totalStock: op,
-                  closingStock: 0,
-                  saleCount: 0,
-                  bottleRate: rate,
-                  saleAmount: 0,
-                  extraAmount: 0,
-                  status: 'DRAFT',
-                  notes: null
-                }
-              })
-            );
+                })
+              );
+            }
           }
         }
       }
@@ -649,7 +752,9 @@ const saveDailyStockSheet = async (req, res, next) => {
     const enrichedSavedRecords = allDayRecords.map(r => ({
       ...r,
       stockValue: (parseInt(r.totalStock, 10) || 0) * (parseFloat(r.bottleRate) || 0),
-      remainingStockValue: parseFloat(((parseInt(r.closingStock, 10) || 0) * (parseFloat(r.bottleRate) || 0)).toFixed(2))
+      remainingStockValue: parseFloat(((parseInt(r.closingStock, 10) || 0) * (parseFloat(r.bottleRate) || 0)).toFixed(2)),
+      extraPerBottle: parseFloat(r.extraPerBottle) || 0,
+      extraAmount: parseFloat(r.extraAmount) || 0
     }));
 
     return res.status(200).json({

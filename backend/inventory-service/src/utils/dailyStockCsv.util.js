@@ -31,9 +31,10 @@ const generateDailyStockCsv = (data) => {
     'Sale',
     'Rate',
     'Stock Value',
-    'Sales Amount',
-    'Remaining Stock Value',
+    'Bottle Sales Amount',
+    'Extra Per Bottle',
     'Extra Amount',
+    'Remaining Stock Value',
     'Status'
   ];
 
@@ -63,7 +64,8 @@ const generateDailyStockCsv = (data) => {
     const stockValue = total * rate;
     const saleAmount = parseFloat(r.saleAmount) || (sale * rate);
     const remainingStockValue = hasClosing ? (closing * rate) : null;
-    const extra = parseFloat(r.extraAmount) || 0;
+    const extraPerBtl = parseFloat(r.extraPerBottle) || 0;
+    const extra = extraPerBtl > 0 ? (sale * extraPerBtl) : (parseFloat(r.extraAmount) || 0);
 
     totalOpening += opening;
     totalIndent += indent;
@@ -93,8 +95,9 @@ const generateDailyStockCsv = (data) => {
       escapeCSV(rate.toFixed(2)),
       escapeCSV(stockValue.toFixed(2)),
       escapeCSV(saleAmount.toFixed(2)),
-      escapeCSV(hasClosing ? remainingStockValue.toFixed(2) : 'Pending'),
+      escapeCSV(extraPerBtl.toFixed(2)),
       escapeCSV(extra.toFixed(2)),
+      escapeCSV(hasClosing ? remainingStockValue.toFixed(2) : 'Pending'),
       escapeCSV(r.status || 'DRAFT')
     ].join(',');
   });
@@ -113,8 +116,9 @@ const generateDailyStockCsv = (data) => {
     escapeCSV(''),
     escapeCSV(totalStockValue.toFixed(2)),
     escapeCSV(totalSalesAmount.toFixed(2)),
-    escapeCSV(totalRemainingStockValue.toFixed(2)),
+    escapeCSV(''),
     escapeCSV(totalExtra.toFixed(2)),
+    escapeCSV(totalRemainingStockValue.toFixed(2)),
     escapeCSV(allCompleted ? 'COMPLETED' : 'PENDING')
   ].join(',');
 
@@ -130,13 +134,13 @@ const generateDailyStockCsv = (data) => {
     [escapeCSV('Total Closing Bottles:'), escapeCSV(totalClosing)].join(','),
     [escapeCSV('Total Bottles Sold:'), escapeCSV(totalSale)].join(','),
     [escapeCSV('Total Available Stock Valuation (Total Qty * Rate):'), escapeCSV(totalStockValue.toFixed(2))].join(','),
-    [escapeCSV('Total Daily Sales Amount (Revenue):'), escapeCSV(totalSalesAmount.toFixed(2))].join(','),
+    [escapeCSV('Total Daily Bottle Sales Amount (Revenue):'), escapeCSV(totalSalesAmount.toFixed(2))].join(','),
     [escapeCSV('Total Remaining Stock Valuation (Closing Qty * Rate):'), escapeCSV(totalRemainingStockValue.toFixed(2))].join(','),
     [escapeCSV('Reconciliation Identity (Stock Value = Sales + Remaining):'), escapeCSV(isReconciled ? 'VERIFIED (Exact Match)' : 'PENDING (Unentered Closings)')].join(','),
     [escapeCSV('Total Extra Amount (Recorded Separately):'), escapeCSV(totalExtra.toFixed(2))].join(','),
     [escapeCSV('Combined Informational Total (Sales + Extra Amount):'), escapeCSV(combinedTotal.toFixed(2))].join(','),
-    [escapeCSV('Sales & Extra Amount Breakdown Formula:'), escapeCSV(`Sales Amount (${totalSalesAmount.toFixed(2)}) + Extra Total Amount (${totalExtra.toFixed(2)}) = Combined Total Amount (${combinedTotal.toFixed(2)})`)].join(','),
-    [escapeCSV('Financial Rule:'), escapeCSV('* Extra Amount is informational only and strictly excluded from official closing revenue & collections.')].join(',')
+    [escapeCSV('Sales & Extra Amount Breakdown Formula:'), escapeCSV(`Bottle Sales Amount (${totalSalesAmount.toFixed(2)}) + Extra Total Amount (${totalExtra.toFixed(2)}) = Combined Total Amount (${combinedTotal.toFixed(2)})`)].join(','),
+    [escapeCSV('Financial Rule:'), escapeCSV('* Extra Amount is calculated automatically (Sale Quantity * Extra Per Bottle) and informational only, strictly excluded from official closing revenue & collections.')].join(',')
   ];
 
   return [headers.map(h => `"${h}"`).join(','), ...rows, totalsRow, ...summaryLines].join('\r\n');

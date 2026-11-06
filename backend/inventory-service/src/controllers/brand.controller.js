@@ -3,6 +3,11 @@ const prisma = require('../config/prisma');
 // Create brand
 const createBrand = async (req, res, next) => {
   try {
+    const { sizes, rates } = req.body;
+    if ((sizes && sizes.length > 0) || (rates && rates.length > 0)) {
+      return createBrandWithRates(req, res, next);
+    }
+
     const { name, description } = req.body;
 
     if (!name || !name.trim()) {
@@ -89,6 +94,10 @@ const getBrands = async (req, res, next) => {
     });
 
     const include = {
+      rates: {
+        where: { isActive: true },
+        include: { size: true }
+      },
       _count: {
         select: {
           products: true,
@@ -148,6 +157,10 @@ const getBrandById = async (req, res, next) => {
     const brand = await prisma.brand.findUnique({
       where: { id },
       include: {
+        rates: {
+          where: { isActive: true },
+          include: { size: true }
+        },
         products: {
           orderBy: { name: 'asc' }
         }
@@ -175,8 +188,9 @@ const getBrandById = async (req, res, next) => {
 // Update brand
 const updateBrand = async (req, res, next) => {
   try {
+    const shopId = req.headers['x-shop-id'] || req.body.shopId || null;
     const { id } = req.params;
-    const { name, description } = req.body;
+    const { name, description, serialNo, isActive, sizes, rates, rateScope } = req.body;
 
     if (name !== undefined && !name.trim()) {
       return res.status(400).json({
@@ -189,7 +203,10 @@ const updateBrand = async (req, res, next) => {
     if (name) {
       const existingBrand = await prisma.brand.findFirst({
         where: {
-          name: name.trim(),
+          name: {
+            equals: name.trim(),
+            mode: 'insensitive'
+          },
           NOT: { id }
         }
       });
@@ -203,18 +220,144 @@ const updateBrand = async (req, res, next) => {
       }
     }
 
-    const updatedBrand = await prisma.brand.update({
-      where: { id },
-      data: {
-        ...(name && { name: name.trim() }),
-        ...(description !== undefined && { description: description ? description.trim() : null })
+    if (serialNo !== undefined && serialNo !== null && serialNo !== '') {
+      const parsedSerial = parseInt(serialNo, 10);
+      if (isNaN(parsedSerial) || parsedSerial <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Serial number must be a positive integer',
+          error: 'VALIDATION_ERROR'
+        });
       }
+      const existingSerial = await prisma.brand.findFirst({
+        where: {
+          serialNo: parsedSerial,
+          NOT: { id }
+        }
+      });
+      if (existingSerial) {
+        return res.status(409).json({
+          success: false,
+          message: `Serial number #${parsedSerial} is already assigned to brand '${existingSerial.name}'`,
+          error: 'DUPLICATE_SERIAL_NO'
+        });
+      }
+    }
+
+    const inputList = (rates && Array.isArray(rates)) ? rates : (sizes && Array.isArray(sizes)) ? sizes : null;
+
+    if (inputList) {
+      for (const r of inputList) {
+        if (!r.sizeId) {
+          return res.status(400).json({
+            success: false,
+            message: 'Each configured rate must specify a valid sizeId',
+            error: 'VALIDATION_ERROR'
+          });
+        }
+        const numericRate = parseFloat(r.rate);
+        if (isNaN(numericRate) || numericRate < 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Rate must be a non-negative number',
+            error: 'VALIDATION_ERROR'
+          });
+        }
+      }
+    }
+
+    // Atomic update in transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const updateData = {};
+      if (name) updateData.name = name.trim();
+      if (description !== undefined) updateData.description = description ? description.trim() : null;
+      if (isActive !== undefined) updateData.isActive = Boolean(isActive);
+      if (serialNo !== undefined && serialNo !== null && serialNo !== '') {
+        updateData.serialNo = parseInt(serialNo, 10);
+      }
+
+      const updatedBrand = await tx.brand.update({
+        where: { id },
+        data: updateData
+      });
+
+      if (inputList) {
+        const existingRates = await tx.brandSizeRate.findMany({
+          where: { brandId: id }
+        });
+
+        const effectiveRateScope = rateScope || (inputList.some(i => i.shopId) ? 'shop' : 'global');
+        const targetScope = effectiveRateScope === 'shop'
+          ? (req.body.shopId || req.headers['x-shop-id'] || null)
+          : null;
+
+        const selectedSizeIds = new Set();
+
+        for (const item of inputList) {
+          const itemShopId = effectiveRateScope === 'shop'
+            ? (item.shopId !== undefined ? item.shopId : targetScope)
+            : null;
+          const numericRate = parseFloat(item.rate);
+          selectedSizeIds.add(item.sizeId);
+
+          const existingRate = existingRates.find(er => 
+            er.sizeId === item.sizeId && 
+            ((!er.shopId && !itemShopId) || (er.shopId === itemShopId))
+          );
+
+          if (existingRate) {
+            await tx.brandSizeRate.update({
+              where: { id: existingRate.id },
+              data: {
+                rate: numericRate,
+                isActive: true
+              }
+            });
+          } else {
+            await tx.brandSizeRate.create({
+              data: {
+                brandId: id,
+                sizeId: item.sizeId,
+                rate: numericRate,
+                shopId: itemShopId || null,
+                isActive: true
+              }
+            });
+          }
+        }
+
+        // Deactivate sizes that were unselected
+        const toDeactivate = existingRates.filter(er => {
+          if (effectiveRateScope === 'global') {
+            // Unselected sizes under global scope are deactivated
+            return !selectedSizeIds.has(er.sizeId) && er.isActive;
+          }
+          return er.shopId === targetScope && !selectedSizeIds.has(er.sizeId) && er.isActive;
+        });
+
+        for (const der of toDeactivate) {
+          await tx.brandSizeRate.update({
+            where: { id: der.id },
+            data: { isActive: false }
+          });
+        }
+      }
+
+      return tx.brand.findUnique({
+        where: { id },
+        include: {
+          rates: {
+            where: { isActive: true },
+            include: { size: true }
+          }
+        }
+      });
     });
 
     return res.status(200).json({
       success: true,
       message: 'Brand updated successfully',
-      data: { brand: updatedBrand }
+      data: { brand: result }
     });
   } catch (error) {
     if (error.code === 'P2025') {
@@ -319,6 +462,39 @@ const getNextSerial = async (req, res, next) => {
       success: true,
       message: 'Next serial number determined',
       data: { nextSerialNo }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get brand by serial number
+const getBrandBySerialNo = async (req, res, next) => {
+  try {
+    const { serialNo } = req.params;
+    const parsedSerial = parseInt(serialNo, 10);
+    if (isNaN(parsedSerial) || parsedSerial <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid serial number',
+        error: 'VALIDATION_ERROR'
+      });
+    }
+
+    const brand = await prisma.brand.findUnique({
+      where: { serialNo: parsedSerial },
+      include: {
+        rates: {
+          where: { isActive: true },
+          include: { size: true }
+        }
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: brand ? 'Brand found by serial number' : 'No brand found with this serial number',
+      data: { brand }
     });
   } catch (error) {
     next(error);
@@ -465,13 +641,117 @@ const createBrandWithRates = async (req, res, next) => {
   }
 };
 
+// Get brand configured sizes with resolved rates (shop override > global fallback)
+const getBrandConfiguredSizes = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const shopId = req.headers['x-shop-id'] || req.query.shopId || null;
+
+    const brand = await prisma.brand.findUnique({
+      where: { id }
+    });
+
+    if (!brand) {
+      return res.status(404).json({
+        success: false,
+        message: 'Brand not found',
+        error: 'BRAND_NOT_FOUND'
+      });
+    }
+
+    const rates = await prisma.brandSizeRate.findMany({
+      where: {
+        brandId: id,
+        isActive: true,
+        OR: [{ shopId }, { shopId: null }]
+      },
+      include: { size: true },
+      orderBy: { size: { volumeMl: 'desc' } }
+    });
+
+    // Resolve shop override vs global fallback per size
+    const sizeMap = new Map();
+    for (const r of rates) {
+      if (!sizeMap.has(r.sizeId) || r.shopId === shopId) {
+        sizeMap.set(r.sizeId, {
+          sizeId: r.sizeId,
+          code: r.size.code,
+          name: r.size.name,
+          volumeMl: r.size.volumeMl,
+          rate: parseFloat(r.rate),
+          shopId: r.shopId
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Brand configured sizes retrieved successfully',
+      data: {
+        brand: {
+          id: brand.id,
+          name: brand.name,
+          serialNo: brand.serialNo
+        },
+        sizes: Array.from(sizeMap.values())
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Remove/Deactivate an individual size from a brand
+const removeBrandSizeRate = async (req, res, next) => {
+  try {
+    const { id, sizeId } = req.params;
+    const shopId = req.headers['x-shop-id'] || req.query.shopId || null;
+    const { scope = 'all' } = req.query;
+
+    const brand = await prisma.brand.findUnique({
+      where: { id }
+    });
+
+    if (!brand) {
+      return res.status(404).json({
+        success: false,
+        message: 'Brand not found',
+        error: 'BRAND_NOT_FOUND'
+      });
+    }
+
+    const where = { brandId: id, sizeId };
+    if (scope === 'shop' && shopId) {
+      where.shopId = shopId;
+    } else if (scope === 'global') {
+      where.shopId = null;
+    }
+
+    const result = await prisma.brandSizeRate.updateMany({
+      where,
+      data: { isActive: false }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Size removed from brand successfully',
+      data: { count: result.count }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createBrand,
   getNextSerial,
+  getBrandBySerialNo,
   createBrandWithRates,
   getBrands,
   getBrandById,
+  getBrandConfiguredSizes,
   updateBrand,
   toggleBrandStatus,
-  deleteBrand
+  deleteBrand,
+  removeBrandSizeRate
 };

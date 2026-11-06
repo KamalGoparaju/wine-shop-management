@@ -137,8 +137,30 @@ const analyzeImportBatch = async (req, res, next) => {
         },
         rows,
         masterData: {
-          brands: activeBrands.map(b => ({ id: b.id, name: b.name, serialNo: b.serialNo })),
-          sizes: activeSizes.map(s => ({ id: s.id, code: s.code, name: s.name, volumeMl: s.volumeMl }))
+          brands: activeBrands.map(b => ({
+            id: b.id,
+            name: b.name,
+            serialNo: b.serialNo,
+            configuredSizes: activeRates
+              .filter(r => r.brandId === b.id)
+              .map(r => {
+                const s = activeSizes.find(sz => sz.id === r.sizeId);
+                return {
+                  sizeId: r.sizeId,
+                  code: s ? s.code : '',
+                  name: s ? s.name : '',
+                  volumeMl: s ? s.volumeMl : null,
+                  rate: parseFloat(r.rate)
+                };
+              })
+          })),
+          sizes: activeSizes.map(s => ({ id: s.id, code: s.code, name: s.name, volumeMl: s.volumeMl })),
+          rates: activeRates.map(r => ({
+            brandId: r.brandId,
+            sizeId: r.sizeId,
+            rate: parseFloat(r.rate),
+            shopId: r.shopId
+          }))
         }
       }
     });
@@ -201,6 +223,33 @@ const confirmImportBatch = async (req, res, next) => {
       });
     }
 
+    // Authoritative backend validation: Reject unconfigured Brand + Size combinations
+    const activeRates = await prisma.brandSizeRate.findMany({
+      where: {
+        isActive: true,
+        OR: [{ shopId }, { shopId: null }]
+      },
+      include: { brand: true, size: true }
+    });
+    const rateMap = new Map();
+    for (const r of activeRates) {
+      const k = `${r.brandId}_${r.sizeId}`;
+      if (!rateMap.has(k) || r.shopId === shopId) {
+        rateMap.set(k, parseFloat(r.rate));
+      }
+    }
+
+    for (const it of approvedItems) {
+      const k = `${it.brandId}_${it.sizeId}`;
+      if (!rateMap.has(k)) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot commit import: Size '${it.sizeCode || it.sizeId}' is not configured for Brand '${it.brandName || it.brandId}'.`,
+          error: 'INVALID_BRAND_SIZE_COMBINATION'
+        });
+      }
+    }
+
     // Authoritative calculations and sanity checks
     const preparedRecords = approvedItems.map(it => {
       const opening = Math.max(0, parseInt(it.openingStock) || 0);
@@ -215,7 +264,13 @@ const confirmImportBatch = async (req, res, next) => {
       const sale = Math.max(0, total - closing);
       const rate = parseFloat(it.bottleRate) || 0;
       const saleAmount = parseFloat((sale * rate).toFixed(2));
-      const extraAmount = parseFloat(parseFloat(it.extraAmount || 0).toFixed(2));
+      const extraPerBottle = Math.max(0, parseFloat(it.extraPerBottle) || 0);
+      let extraAmount = 0;
+      if (it.extraPerBottle !== undefined && it.extraPerBottle !== null) {
+        extraAmount = parseFloat((sale * extraPerBottle).toFixed(2));
+      } else {
+        extraAmount = parseFloat(parseFloat(it.extraAmount || 0).toFixed(2));
+      }
 
       return {
         shopId,
@@ -229,6 +284,7 @@ const confirmImportBatch = async (req, res, next) => {
         saleCount: sale,
         bottleRate: rate,
         saleAmount,
+        extraPerBottle,
         extraAmount,
         status: status === 'COMPLETED' ? 'COMPLETED' : 'DRAFT'
       };
@@ -284,6 +340,7 @@ const confirmImportBatch = async (req, res, next) => {
             saleCount: rec.saleCount,
             bottleRate: rec.bottleRate,
             saleAmount: rec.saleAmount,
+            extraPerBottle: rec.extraPerBottle,
             extraAmount: rec.extraAmount,
             status: rec.status,
             updatedAt: new Date()

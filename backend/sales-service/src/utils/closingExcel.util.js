@@ -318,7 +318,7 @@ const generateClosingHistoryExcel = async (data, res) => {
   if (stockRecords.length > 0) {
     const stockSheet = workbook.addWorksheet('Stock Breakdown');
 
-    stockSheet.mergeCells('A1:L1');
+    stockSheet.mergeCells('A1:M1');
     const stkTitle = stockSheet.getCell('A1');
     stkTitle.value = `BRAND & SIZE STOCK BREAKDOWN — ${shopName} (${shopCode})`;
     stkTitle.font = { name: 'Calibri', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
@@ -337,8 +337,9 @@ const generateClosingHistoryExcel = async (data, res) => {
       'Sale',
       'Rate (INR)',
       'Stock Value (INR)',
-      'Sales Amount (INR)',
-      'Extra Amount'
+      'Bottle Sales Amount (INR)',
+      'Extra Per Bottle (INR)',
+      'Extra Amount (INR)'
     ];
 
     const stkHeaderRow = stockSheet.addRow(stkHeaders);
@@ -358,7 +359,8 @@ const generateClosingHistoryExcel = async (data, res) => {
       const rt = formatFloat(r.bottleRate);
       const sv = tot * rt;
       const sa = formatFloat(r.saleAmount) || (sl * rt);
-      const ex = formatFloat(r.extraAmount);
+      const epb = formatFloat(r.extraPerBottle);
+      const ex = epb > 0 ? (sl * epb) : formatFloat(r.extraAmount);
 
       const row = stockSheet.addRow([
         r.brand?.serialNo || (idx + 1),
@@ -372,6 +374,7 @@ const generateClosingHistoryExcel = async (data, res) => {
         rt,
         sv,
         sa,
+        epb,
         ex
       ]);
 
@@ -382,7 +385,7 @@ const generateClosingHistoryExcel = async (data, res) => {
         if (col >= 4 && col <= 8) {
           cell.alignment = { vertical: 'middle', horizontal: 'right' };
           cell.numFmt = '#,##0';
-        } else if (col >= 9 && col <= 12) {
+        } else if (col >= 9 && col <= 13) {
           cell.alignment = { vertical: 'middle', horizontal: 'right' };
           cell.numFmt = '₹#,##0.00';
         }
@@ -400,8 +403,9 @@ const generateClosingHistoryExcel = async (data, res) => {
       { width: 12 },
       { width: 14 },
       { width: 18 },
+      { width: 20 },
       { width: 18 },
-      { width: 14 }
+      { width: 16 }
     ];
   }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Layout from '../components/Layout';
 import apiClient from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -17,11 +17,15 @@ import {
   FileText,
   FileSpreadsheet,
   Plus,
+  PlusCircle,
   X,
   Search,
   LayoutGrid,
   Table as TableIcon,
-  UploadCloud
+  UploadCloud,
+  Trash2,
+  Sparkles,
+  Check
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { downloadAuthenticatedFile } from '../utils/download';
@@ -80,6 +84,23 @@ const DailyStock = () => {
   const [newBrandIsActive, setNewBrandIsActive] = useState(true);
   const [newBrandRateScope, setNewBrandRateScope] = useState('global');
   const [sizeConfigs, setSizeConfigs] = useState({});
+  const [existingBrandLoaded, setExistingBrandLoaded] = useState(null);
+  const [serialLookupLoading, setSerialLookupLoading] = useState(false);
+  const [serialLookupMessage, setSerialLookupMessage] = useState(null);
+
+  // Floating prompt state for applying Extra Per Bottle to active rows
+  const [extraPrompt, setExtraPrompt] = useState(null); // { rowIndex, value, eligibleCount }
+
+  // Dismiss prompt on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && extraPrompt) {
+        setExtraPrompt(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [extraPrompt]);
 
   const handleExportPdf = async () => {
     if (!selectedShop?.id) return;
@@ -164,7 +185,10 @@ const DailyStock = () => {
           stockValue,
           saleCount: sale,
           saleAmount,
-          extraAmount: staged.extraAmount !== undefined ? staged.extraAmount : row.extraAmount,
+          extraPerBottle: staged.extraPerBottle !== undefined ? staged.extraPerBottle : (row.extraPerBottle ?? 0),
+          extraAmount: staged.extraPerBottle !== undefined && sale > 0
+            ? parseFloat((sale * (parseFloat(staged.extraPerBottle) || 0)).toFixed(2))
+            : (staged.extraAmount !== undefined ? staged.extraAmount : (row.extraAmount || 0)),
           closingError: hasClosing && clNum > total ? `Closing (${clNum}) exceeds Total (${total})` : null
         };
       }
@@ -183,6 +207,7 @@ const DailyStock = () => {
     const reqId = getNextRequestId();
     setLoading(true);
     setError('');
+    setExtraPrompt(null);
 
     try {
       const res = await apiClient.get('/inventory/daily-stock', {
@@ -305,6 +330,9 @@ const DailyStock = () => {
     const stockValue = total * rate;
     const saleAmount = hasClosing ? sale * rate : 0;
 
+    const extraPerBtl = parseFloat(row.extraPerBottle) || 0;
+    const calcExtra = parseFloat((sale * extraPerBtl).toFixed(2));
+
     nextItems[index] = {
       ...row,
       openingStock: opening,
@@ -312,6 +340,7 @@ const DailyStock = () => {
       stockValue,
       saleCount: sale,
       saleAmount,
+      extraAmount: calcExtra,
       closingError: hasClosing && clNum > total ? `Closing (${clNum}) exceeds Total (${total})` : null
     };
     setItems(nextItems);
@@ -328,7 +357,8 @@ const DailyStock = () => {
         openingStock: opening,
         indentStock: row.indentStock,
         closingStock: row.closingStock,
-        extraAmount: row.extraAmount
+        extraPerBottle: row.extraPerBottle ?? 0,
+        extraAmount: calcExtra
       }
     }));
   };
@@ -346,6 +376,8 @@ const DailyStock = () => {
     const rate = parseFloat(row.bottleRate) || 0;
     const stockValue = total * rate;
     const saleAmount = hasClosing ? sale * rate : 0;
+    const extraPerBtl = parseFloat(row.extraPerBottle) || 0;
+    const calcExtra = parseFloat((sale * extraPerBtl).toFixed(2));
 
     nextItems[index] = {
       ...row,
@@ -354,6 +386,7 @@ const DailyStock = () => {
       stockValue,
       saleCount: sale,
       saleAmount,
+      extraAmount: calcExtra,
       closingError: hasClosing && clNum > total ? `Closing (${clNum}) exceeds Total (${total})` : null
     };
     setItems(nextItems);
@@ -370,7 +403,8 @@ const DailyStock = () => {
         openingStock: row.openingStock,
         indentStock: indent,
         closingStock: row.closingStock,
-        extraAmount: row.extraAmount
+        extraPerBottle: row.extraPerBottle ?? 0,
+        extraAmount: calcExtra
       }
     }));
   };
@@ -385,12 +419,15 @@ const DailyStock = () => {
     const sale = hasVal ? Math.max(0, total - clNum) : 0;
     const rate = parseFloat(row.bottleRate) || 0;
     const saleAmount = hasVal ? sale * rate : 0;
+    const extraPerBtl = parseFloat(row.extraPerBottle) || 0;
+    const calcExtra = parseFloat((sale * extraPerBtl).toFixed(2));
 
     nextItems[index] = {
       ...row,
       closingStock: closing,
       saleCount: sale,
       saleAmount,
+      extraAmount: calcExtra,
       closingError: hasVal && clNum > total ? `Closing (${clNum}) exceeds Total (${total})` : null
     };
     setItems(nextItems);
@@ -407,17 +444,24 @@ const DailyStock = () => {
         openingStock: row.openingStock,
         indentStock: row.indentStock,
         closingStock: closing,
-        extraAmount: row.extraAmount
+        extraPerBottle: row.extraPerBottle ?? 0,
+        extraAmount: calcExtra
       }
     }));
   };
 
-  const handleExtraAmountChange = (index, val) => {
+  const handleExtraPerBottleChange = (index, val) => {
     const nextItems = [...items];
     const row = nextItems[index];
+    const extraPerBtl = val === '' ? '' : Math.max(0, parseFloat(val) || 0);
+    const extraNum = val === '' ? 0 : extraPerBtl;
+    const sale = parseInt(row.saleCount, 10) || 0;
+    const calcExtra = parseFloat((sale * extraNum).toFixed(2));
+
     nextItems[index] = {
       ...row,
-      extraAmount: val
+      extraPerBottle: val,
+      extraAmount: calcExtra
     };
     setItems(nextItems);
 
@@ -433,9 +477,80 @@ const DailyStock = () => {
         openingStock: row.openingStock,
         indentStock: row.indentStock,
         closingStock: row.closingStock,
-        extraAmount: val
+        extraPerBottle: val,
+        extraAmount: calcExtra
       }
     }));
+
+    // Auto-prompt condition:
+    // Only prompt if a positive amount is typed (e.g. 5, 10, 20)
+    const num = parseFloat(val);
+    if (val !== '' && !isNaN(num) && num > 0) {
+      // Find qualifying rows (rows with indent > 0 or closing count entered)
+      const eligibleRows = nextItems.filter((r, idx) => {
+        if (idx === index) return false;
+        const hasIndent = parseInt(r.indentStock, 10) > 0;
+        const hasClosing = r.closingStock !== '' && r.closingStock !== null && r.closingStock !== undefined;
+        return hasIndent || hasClosing;
+      });
+
+      setExtraPrompt({
+        rowIndex: index,
+        value: val,
+        eligibleCount: eligibleRows.length
+      });
+    } else {
+      setExtraPrompt(null);
+    }
+  };
+
+  const handleApplyExtraToAllEligible = () => {
+    if (!extraPrompt) return;
+    const { value, rowIndex } = extraPrompt;
+    const extraNum = parseFloat(value) || 0;
+
+    const nextItems = [...items];
+    const newStagedEdits = { ...stagedEdits };
+    let updatedCount = 0;
+
+    nextItems.forEach((row, idx) => {
+      const hasIndent = parseInt(row.indentStock, 10) > 0;
+      const hasClosing = row.closingStock !== '' && row.closingStock !== null && row.closingStock !== undefined;
+      // Apply to the active row typed into or any row with indent > 0 or closing entered
+      if (idx === rowIndex || hasIndent || hasClosing) {
+        const sale = parseInt(row.saleCount, 10) || 0;
+        const calcExtra = parseFloat((sale * extraNum).toFixed(2));
+        nextItems[idx] = {
+          ...row,
+          extraPerBottle: value,
+          extraAmount: calcExtra
+        };
+
+        const key = `${row.brandId}_${row.sizeId}`;
+        newStagedEdits[key] = {
+          ...(newStagedEdits[key] || {}),
+          brandId: row.brandId,
+          sizeId: row.sizeId,
+          bottleRate: row.bottleRate,
+          notes: row.notes,
+          openingStock: row.openingStock,
+          indentStock: row.indentStock,
+          closingStock: row.closingStock,
+          extraPerBottle: value,
+          extraAmount: calcExtra
+        };
+        updatedCount++;
+      }
+    });
+
+    setItems(nextItems);
+    setStagedEdits(newStagedEdits);
+    setExtraPrompt(null);
+    setSuccessMsg(`Applied ₹${extraNum} Extra Per Bottle to ${updatedCount} active rows (with Indent or Closing)!`);
+  };
+
+  const handleDismissExtraPrompt = () => {
+    setExtraPrompt(null);
   };
 
   const incompleteCount = items.filter(
@@ -449,6 +564,7 @@ const DailyStock = () => {
   const handleSave = async (status = 'DRAFT') => {
     setError('');
     setSuccessMsg('');
+    setExtraPrompt(null);
 
     if (invalidRowsCount > 0) {
       setError(`Cannot save: ${invalidRowsCount} brand row(s) on current page have closing count exceeding total stock.`);
@@ -481,6 +597,7 @@ const DailyStock = () => {
           totalStock: tot,
           closingStock: cl,
           bottleRate: parseFloat(staged.bottleRate) || 0,
+          extraPerBottle: parseFloat(staged.extraPerBottle) || 0,
           extraAmount: parseFloat(staged.extraAmount) || 0,
           notes: staged.notes || ''
         });
@@ -502,10 +619,24 @@ const DailyStock = () => {
           totalStock: tot,
           closingStock: cl,
           bottleRate: parseFloat(item.bottleRate) || 0,
+          extraPerBottle: parseFloat(item.extraPerBottle) || 0,
           extraAmount: parseFloat(item.extraAmount) || 0,
           notes: item.notes || ''
         });
       });
+
+      if (status === 'COMPLETED') {
+        const unconfiguredItem = items.find(
+          it => !it.bottleRate || parseFloat(it.bottleRate) <= 0
+        );
+        if (unconfiguredItem) {
+          setError(
+            `Cannot finalize Daily Stock: "${unconfiguredItem.brand?.name || 'Item'} (${unconfiguredItem.size?.code || ''})" has no selling rate configured in Brand Management. Please configure rates before completing daily closing.`
+          );
+          setSaving(false);
+          return;
+        }
+      }
 
       const payload = {
         businessDate,
@@ -537,6 +668,8 @@ const DailyStock = () => {
     setNewBrandDescription('');
     setNewBrandIsActive(true);
     setNewBrandRateScope('global');
+    setExistingBrandLoaded(null);
+    setSerialLookupMessage(null);
     setModalError('');
     setShowAddBrandModal(true);
     setModalLoading(true);
@@ -558,12 +691,72 @@ const DailyStock = () => {
 
       if (serialRes?.success && serialRes.data?.nextSerialNo) {
         setNewBrandSerialNo(serialRes.data.nextSerialNo);
+        setSerialLookupMessage({
+          type: 'new',
+          text: `Serial #${serialRes.data.nextSerialNo} is suggested for your new brand.`
+        });
       }
     } catch (err) {
       console.error('Failed to load sizes or serial number:', err);
       setModalError('Failed to initialize brand form. Please try again.');
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  // Auto-fetch brand details & configured rates when user enters a Serial Number
+  const handleSerialLookup = async (val) => {
+    setNewBrandSerialNo(val);
+    setModalError('');
+
+    const parsed = parseInt(val, 10);
+    if (!val || isNaN(parsed) || parsed <= 0) {
+      setExistingBrandLoaded(null);
+      setSerialLookupMessage(null);
+      return;
+    }
+
+    setSerialLookupLoading(true);
+    try {
+      const res = await apiClient.get(`/inventory/brands/by-serial/${parsed}`, {
+        headers: { 'x-shop-id': selectedShop?.id }
+      });
+
+      if (res.success && res.data?.brand) {
+        const b = res.data.brand;
+        setExistingBrandLoaded(b);
+        setNewBrandName(b.name || '');
+        setNewBrandDescription(b.description || '');
+        setNewBrandIsActive(b.isActive !== undefined ? b.isActive : true);
+
+        // Populate configured sizes and their selling rates!
+        const configs = {};
+        availableSizes.forEach(s => {
+          const matchingRate = b.rates?.find(r => r.sizeId === s.id && r.isActive);
+          if (matchingRate && matchingRate.rate !== undefined && matchingRate.rate !== null) {
+            configs[s.id] = { selected: true, rate: String(matchingRate.rate) };
+          } else {
+            configs[s.id] = { selected: false, rate: '' };
+          }
+        });
+        setSizeConfigs(configs);
+
+        setSerialLookupMessage({
+          type: 'found',
+          text: `Found existing Brand #${b.serialNo}: "${b.name}" — rates & details auto-loaded.`
+        });
+      } else {
+        // Serial number does not belong to any existing brand -> available for new brand
+        setExistingBrandLoaded(null);
+        setSerialLookupMessage({
+          type: 'new',
+          text: `Serial #${parsed} is available for a new brand.`
+        });
+      }
+    } catch (err) {
+      console.error('Serial lookup error:', err);
+    } finally {
+      setSerialLookupLoading(false);
     }
   };
 
@@ -623,24 +816,68 @@ const DailyStock = () => {
         description: newBrandDescription.trim(),
         serialNo: newBrandSerialNo !== '' ? parseInt(newBrandSerialNo, 10) : undefined,
         isActive: newBrandIsActive,
-        sizes: selectedSizes
+        sizes: selectedSizes,
+        rateScope: newBrandRateScope
       };
 
-      const res = await apiClient.post('/inventory/brands/with-rates', payload, {
-        headers: { 'x-shop-id': selectedShop?.id }
-      });
-
-      if (res.success) {
+      if (existingBrandLoaded) {
+        // Update existing brand
+        await apiClient.put(`/inventory/brands/${existingBrandLoaded.id}`, payload, {
+          headers: { 'x-shop-id': selectedShop?.id }
+        });
         setShowAddBrandModal(false);
         setSuccessMsg(
-          `Brand "${newBrandName.trim()}" added successfully with ${selectedSizes.length} configured size(s)! Rows are now available on the Daily Stock Sheet.`
+          `Brand "${newBrandName.trim()}" (#${existingBrandLoaded.serialNo}) updated successfully with ${selectedSizes.length} configured size(s)!`
         );
         fetchDailySheet(businessDate);
+      } else {
+        // Create new brand
+        const res = await apiClient.post('/inventory/brands/with-rates', payload, {
+          headers: { 'x-shop-id': selectedShop?.id }
+        });
+
+        if (res.success) {
+          setShowAddBrandModal(false);
+          setSuccessMsg(
+            `Brand "${newBrandName.trim()}" added successfully with ${selectedSizes.length} configured size(s)! Rows are now available on the Daily Stock Sheet.`
+          );
+          fetchDailySheet(businessDate);
+        }
       }
     } catch (err) {
-      setModalError(err?.message || 'Failed to create brand.');
+      setModalError(err?.message || 'Failed to save brand.');
     } finally {
       setModalSubmitting(false);
+    }
+  };
+
+  const handleDeleteSizeFromBrand = async (sizeId, sizeCode) => {
+    if (existingBrandLoaded) {
+      const confirmed = window.confirm(
+        `Remove size "${sizeCode}" from brand "${existingBrandLoaded.name}"? This size will no longer appear on daily stock sheets for this brand.`
+      );
+      if (!confirmed) return;
+
+      try {
+        const res = await apiClient.delete(`/inventory/brands/${existingBrandLoaded.id}/sizes/${sizeId}`, {
+          headers: { 'x-shop-id': selectedShop?.id },
+          params: { scope: newBrandRateScope }
+        });
+        if (res.success) {
+          setSizeConfigs(prev => ({
+            ...prev,
+            [sizeId]: { selected: false, rate: '' }
+          }));
+          fetchDailySheet(businessDate);
+        }
+      } catch (err) {
+        setModalError(err?.message || 'Failed to remove size from brand.');
+      }
+    } else {
+      setSizeConfigs(prev => ({
+        ...prev,
+        [sizeId]: { selected: false, rate: '' }
+      }));
     }
   };
 
@@ -661,7 +898,9 @@ const DailyStock = () => {
     const r = parseFloat(curr.bottleRate) || 0;
     return acc + (hasCl ? cl * r : 0);
   }, 0);
-  const totalExtraAmount = backendSummary ? parseFloat(backendSummary.totalExtraAmount) || 0 : items.reduce((acc, curr) => acc + (parseFloat(curr.extraAmount) || 0), 0);
+  const totalExtraAmount = (Object.keys(stagedEdits).length === 0 && backendSummary)
+    ? parseFloat(backendSummary.totalExtraAmount) || 0
+    : items.reduce((acc, curr) => acc + (parseFloat(curr.extraAmount) || 0), 0);
   const combinedTotalAmount = totalBusinessAmount + totalExtraAmount;
 
   const allRowsCompleted = backendSummary
@@ -670,6 +909,25 @@ const DailyStock = () => {
   const isReconciled = backendSummary
     ? backendSummary.isReconciled
     : (allRowsCompleted && Math.abs(totalStockValue - (totalBusinessAmount + totalRemainingStockValue)) < 0.05);
+
+  // Pre-calculate contiguous brand row spans for table grouping
+  const brandRowSpans = useMemo(() => {
+    const spans = {};
+    items.forEach((item, index) => {
+      const brandId = item.brandId || item.brand?.id;
+      const prevBrandId = index > 0 ? (items[index - 1].brandId || items[index - 1].brand?.id) : null;
+      if (index === 0 || prevBrandId !== brandId) {
+        let count = 1;
+        for (let j = index + 1; j < items.length; j++) {
+          const nextBrandId = items[j].brandId || items[j].brand?.id;
+          if (nextBrandId === brandId) count++;
+          else break;
+        }
+        spans[index] = count;
+      }
+    });
+    return spans;
+  }, [items]);
 
   return (
     <Layout title="Daily Stock Calculation Sheet">
@@ -1122,7 +1380,15 @@ const DailyStock = () => {
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-500 mt-1">
-                          Selling Rate: <strong className="text-slate-800">₹{row.bottleRate}</strong> / bottle
+                          Selling Rate:{' '}
+                          {parseFloat(row.bottleRate || 0) > 0 ? (
+                            <strong className="text-slate-800">₹{row.bottleRate}</strong>
+                          ) : (
+                            <span className="text-[10px] text-rose-600 font-bold bg-rose-50 border border-rose-200 px-1 py-0.5 rounded">
+                              Rate Missing
+                            </span>
+                          )}{' '}
+                          / bottle
                         </p>
                       </div>
 
@@ -1214,6 +1480,33 @@ const DailyStock = () => {
                         </div>
                       </div>
 
+                      {/* Extra Per Bottle Entry */}
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">
+                          Extra Per Bottle (₹)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={row.extraPerBottle ?? ''}
+                          onChange={(e) => handleExtraPerBottleChange(idx, e.target.value)}
+                          disabled={meta.isLocked}
+                          placeholder="0.00"
+                          className="w-full bg-white border border-slate-300 rounded-xl py-2 px-3 text-right font-mono font-bold text-base focus:outline-none focus-theme disabled:opacity-50"
+                        />
+                      </div>
+
+                      {/* Calculated Extra Amount (Read-only) */}
+                      <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs">
+                        <span className="text-[10px] font-bold uppercase text-slate-600 font-sans">
+                          Extra Amount (Info)
+                        </span>
+                        <span className="font-bold font-mono text-slate-800 text-sm">
+                          ₹{parseFloat(row.extraAmount || 0).toFixed(2)}
+                        </span>
+                      </div>
+
                       {/* Remaining Stock Value card item */}
                       <div className="flex items-center justify-between bg-indigo-50/60 p-2 rounded-xl border border-indigo-100 text-xs">
                         <span className="text-[10px] font-bold uppercase text-indigo-800 font-sans">
@@ -1294,9 +1587,9 @@ const DailyStock = () => {
               <table className="table-grid min-w-[960px]">
                 <thead className="sticky top-0 z-10">
                   <tr>
-                    <th className="text-center w-12">S.No.</th>
-                    <th>Brand Name</th>
-                    <th className="text-center w-16">Size</th>
+                    <th className="text-center w-14 border-r border-slate-200">S.No.</th>
+                    <th className="border-r border-slate-200 w-48">Brand Name</th>
+                    <th className="text-center w-16 border-r border-slate-200">Size</th>
                     <th className="text-center w-20">Opening</th>
                     <th className="text-center w-20">Indent</th>
                     <th className="text-center w-20">Total</th>
@@ -1304,11 +1597,12 @@ const DailyStock = () => {
                     <th className="text-center w-20" style={{ color: activeTheme.primary }}>Sale</th>
                     <th className="text-right w-24">Rate</th>
                     <th className="text-right w-28 text-slate-700">Stock Value (₹)</th>
-                    <th className="text-right w-28 text-emerald-700">Amount (₹)</th>
-                    <th className="text-right w-32 text-indigo-700">Remaining Stock Value (₹)</th>
-                    <th className="text-right w-24 text-slate-500" title="Informational only; excluded from financial totals">
-                      Extra Amt*
+                    <th className="text-right w-28 text-emerald-700">Bottle Sales Amount (₹)</th>
+                    <th className="text-right w-24 text-slate-700">Extra Per Bottle (₹)</th>
+                    <th className="text-right w-24 text-slate-700" title="Sale Quantity × Extra Per Bottle (Informational only)">
+                      Extra Amount (₹)*
                     </th>
+                    <th className="text-right w-32 text-indigo-700">Remaining Stock Value (₹)</th>
                   </tr>
                 </thead>
                 <tbody className="font-mono text-xs">
@@ -1316,23 +1610,48 @@ const DailyStock = () => {
                     const isInitialRow = meta.isInitialSetup || row.isInitialOpening;
                     const isPendingClosing = row.closingStock === '' || row.closingStock === null || row.closingStock === undefined;
 
+                    const span = brandRowSpans[idx];
+                    const isFirstOfBrand = span !== undefined;
+                    const isLastOfBrand = (idx === items.length - 1) || ((items[idx + 1]?.brandId || items[idx + 1]?.brand?.id) !== (row.brandId || row.brand?.id));
+                    const brandSlice = isFirstOfBrand ? items.slice(idx, idx + span) : [];
+                    const brandHasPending = isFirstOfBrand && brandSlice.some(
+                      r => r.closingStock === '' || r.closingStock === null || r.closingStock === undefined
+                    );
+
                     return (
-                      <tr key={row.id || idx}>
-                        <td className="text-center font-bold text-slate-500">
-                          {row.brand?.serialNo || idx + 1}
-                        </td>
-                        <td className="font-sans font-bold text-slate-900">
-                          <div className="flex items-center gap-1.5">
-                            <span>{row.brand?.name}</span>
-                            {isPendingClosing && !meta.isLocked && (
-                              <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-300 px-1.5 py-0.2 rounded font-sans font-semibold">
-                                Pending
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="text-center font-bold" style={{ color: activeTheme.primary }}>
-                          {row.size?.code}
+                      <tr 
+                        key={row.id || idx}
+                        className={`hover:bg-slate-50/50 transition-colors ${
+                          isLastOfBrand ? 'border-b-2 border-slate-300' : 'border-b border-slate-100'
+                        }`}
+                      >
+                        {isFirstOfBrand && (
+                          <td 
+                            rowSpan={span}
+                            className="text-center font-bold text-slate-600 align-middle border-r border-slate-200 bg-white"
+                          >
+                            {row.brand?.serialNo || idx + 1}
+                          </td>
+                        )}
+                        {isFirstOfBrand && (
+                          <td 
+                            rowSpan={span}
+                            className="font-sans font-bold text-slate-900 align-middle border-r border-slate-200 bg-white px-3"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm">{row.brand?.name}</span>
+                              {brandHasPending && !meta.isLocked && (
+                                <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-300 px-1.5 py-0.2 rounded font-sans font-semibold">
+                                  Pending
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                        <td className="text-center font-bold border-r border-slate-200" style={{ color: activeTheme.primary }}>
+                          <span className="px-1.5 py-0.5 rounded bg-slate-50 border border-slate-200 text-xs">
+                            {row.size?.code}
+                          </span>
                         </td>
                         <td className="text-center text-slate-700">
                           {isInitialRow && !meta.isLocked ? (
@@ -1386,13 +1705,38 @@ const DailyStock = () => {
                           {isPendingClosing ? '—' : row.saleCount}
                         </td>
                         <td className="text-right text-slate-600">
-                          ₹{row.bottleRate}
+                          {parseFloat(row.bottleRate || 0) > 0 ? (
+                            <span>₹{row.bottleRate}</span>
+                          ) : (
+                            <span
+                              className="text-[10px] text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded font-semibold inline-block"
+                              title="Rate not configured in Brand Management"
+                            >
+                              Rate Missing
+                            </span>
+                          )}
                         </td>
                         <td className="text-right font-bold text-slate-800 font-sans">
                           ₹{((parseInt(row.totalStock, 10) || 0) * (parseFloat(row.bottleRate) || 0)).toFixed(2)}
                         </td>
                         <td className="text-right font-bold text-emerald-700 font-sans">
                           ₹{parseFloat(row.saleAmount || 0).toFixed(2)}
+                        </td>
+                        <td className="text-right">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.extraPerBottle ?? ''}
+                            onChange={(e) => handleExtraPerBottleChange(idx, e.target.value)}
+                            disabled={meta.isLocked}
+                            placeholder="0.00"
+                            className="w-20 bg-white border border-slate-300 rounded-lg py-1 px-1.5 text-right text-slate-700 font-mono font-semibold focus:outline-none focus-theme text-xs disabled:opacity-50"
+                            title="Extra charge per bottle"
+                          />
+                        </td>
+                        <td className="text-right font-mono font-semibold text-slate-600 font-sans">
+                          ₹{parseFloat(row.extraAmount || 0).toFixed(2)}
                         </td>
                         <td className="text-right font-bold text-indigo-700 font-sans">
                           {!isPendingClosing ? (
@@ -1402,18 +1746,6 @@ const DailyStock = () => {
                               Pending
                             </span>
                           )}
-                        </td>
-                        <td className="text-right">
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={row.extraAmount}
-                            onChange={(e) => handleExtraAmountChange(idx, e.target.value)}
-                            disabled={meta.isLocked}
-                            placeholder="0.00"
-                            className="w-20 bg-white border border-slate-300 rounded-lg py-1 px-1.5 text-right text-slate-600 focus:outline-none focus-theme text-xs disabled:opacity-50"
-                          />
                         </td>
                       </tr>
                     );
@@ -1437,11 +1769,12 @@ const DailyStock = () => {
                     <td className="text-right text-emerald-700 font-extrabold font-sans px-2 py-2.5">
                       ₹{totalBusinessAmount.toFixed(2)}
                     </td>
+                    <td className="text-right text-slate-400 px-2 py-2.5">—</td>
+                    <td className="text-right text-slate-700 font-bold font-sans px-2 py-2.5" title="Sale Quantity × Extra Per Bottle (Informational only)">
+                      ₹{totalExtraAmount.toFixed(2)}
+                    </td>
                     <td className="text-right text-indigo-700 font-extrabold font-sans px-2 py-2.5">
                       ₹{totalRemainingStockValue.toFixed(2)}
-                    </td>
-                    <td className="text-right text-slate-700 font-bold font-sans px-2 py-2.5" title="Informational only">
-                      ₹{totalExtraAmount.toFixed(2)}
                     </td>
                   </tr>
                 </tfoot>
@@ -1494,8 +1827,12 @@ const DailyStock = () => {
                   <Plus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900">Add New Brand & Sizes</h3>
-                  <p className="text-xs text-slate-500">Configure brand details and selling rates</p>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                    {existingBrandLoaded ? `Edit Brand #${existingBrandLoaded.serialNo} & Sizes` : 'Add New Brand & Sizes'}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {existingBrandLoaded ? 'Update brand details and bottle selling rates' : 'Configure brand details and selling rates'}
+                  </p>
                 </div>
               </div>
               <button
@@ -1535,24 +1872,46 @@ const DailyStock = () => {
                       value={newBrandName}
                       onChange={(e) => setNewBrandName(e.target.value)}
                       placeholder="e.g. Blenders Pride"
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 text-sm focus:outline-none focus-theme placeholder-slate-400 font-medium"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 text-sm focus:outline-none focus-theme placeholder-slate-400 font-medium font-sans"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1" title="Auto-assigned sequential serial number">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1" title="Sequential serial number">
                       Serial No. (S.No.)
                     </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={newBrandSerialNo}
-                      onChange={(e) => setNewBrandSerialNo(e.target.value)}
-                      placeholder="Auto"
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 font-mono font-bold text-sm focus:outline-none focus-theme text-slate-800"
-                    />
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="1"
+                        value={newBrandSerialNo}
+                        onChange={(e) => handleSerialLookup(e.target.value)}
+                        placeholder="Auto"
+                        className={`w-full bg-white border rounded-xl px-3.5 py-2.5 font-mono font-bold text-sm focus:outline-none focus-theme ${
+                          existingBrandLoaded ? 'border-indigo-400 bg-indigo-50/30 text-indigo-900' : 'border-slate-300 text-slate-800'
+                        }`}
+                      />
+                      {serialLookupLoading && (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                {serialLookupMessage && (
+                  <div className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 font-sans ${
+                    serialLookupMessage.type === 'found'
+                      ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}>
+                    {serialLookupMessage.type === 'found' ? (
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-indigo-600" />
+                    ) : (
+                      <Info className="w-4 h-4 shrink-0 text-emerald-600" />
+                    )}
+                    <span>{serialLookupMessage.text}</span>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
@@ -1636,6 +1995,17 @@ const DailyStock = () => {
                               }`}
                             />
                             <span className="text-[11px] text-slate-500 hidden xs:inline">/ btl</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteSizeFromBrand(sz.id, sz.code);
+                              }}
+                              title={`Remove ${sz.code} size from this brand`}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors ml-1"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </div>
                       );
@@ -1707,6 +2077,11 @@ const DailyStock = () => {
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                           Saving...
                         </>
+                      ) : existingBrandLoaded ? (
+                        <>
+                          <Save className="w-3.5 h-3.5" />
+                          Update Brand & Rates
+                        </>
                       ) : (
                         <>
                           <Plus className="w-3.5 h-3.5" />
@@ -1739,6 +2114,70 @@ const DailyStock = () => {
             }}
           />
         </ErrorBoundary>
+      )}
+
+      {/* Floating Auto-Prompt for Extra Per Bottle */}
+      {extraPrompt && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 backdrop-blur-md text-white p-3.5 sm:p-4 rounded-2xl shadow-2xl border border-slate-700/80 flex flex-col sm:flex-row items-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-200 max-w-xl w-[94vw] sm:w-auto">
+          {extraPrompt.eligibleCount > 0 ? (
+            <>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold shrink-0">
+                  <Sparkles className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm font-bold text-white">
+                    Apply ₹{extraPrompt.value} to all {extraPrompt.eligibleCount} active rows?
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    Only fills rows with Indent &gt; 0 or Closing stock entered
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={handleDismissExtraPrompt}
+                  className="px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors font-medium cursor-pointer"
+                >
+                  Only this row
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyExtraToAllEligible}
+                  className="px-3.5 py-1.5 text-xs font-bold text-white rounded-lg transition-all shadow-md flex items-center gap-1.5 cursor-pointer hover:brightness-110 active:scale-95"
+                  style={{ backgroundColor: activeTheme.primary }}
+                >
+                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                  Apply to All ({extraPrompt.eligibleCount})
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-between gap-3 w-full">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold shrink-0">
+                  <Info className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white">
+                    ₹{extraPrompt.value} set for this row
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    No other active rows yet (other rows need Indent &gt; 0 or Closing entered to auto-fill)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleDismissExtraPrompt}
+                className="px-2.5 py-1 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors font-medium cursor-pointer shrink-0"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </Layout>
   );

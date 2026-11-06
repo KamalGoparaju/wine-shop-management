@@ -196,18 +196,19 @@ const generateClosingReportPdf = (data, stream) => {
     const drawStockHeader = (y) => {
       doc.rect(36, y, 523, 16).fill('#1e293b');
       doc.fillColor('#ffffff').fontSize(6.5).font('Helvetica-Bold');
-      doc.text('S.No', 38, y + 4, { width: 20 });
-      doc.text('Brand', 60, y + 4, { width: 115 });
-      doc.text('Size', 178, y + 4, { width: 38 });
-      doc.text('Opn', 218, y + 4, { width: 22, align: 'right' });
-      doc.text('Ind', 242, y + 4, { width: 22, align: 'right' });
-      doc.text('Tot', 266, y + 4, { width: 24, align: 'right' });
-      doc.text('Cls', 292, y + 4, { width: 22, align: 'right' });
-      doc.text('Sale', 316, y + 4, { width: 22, align: 'right' });
-      doc.text('Rate', 340, y + 4, { width: 36, align: 'right' });
-      doc.text('Stock Val', 378, y + 4, { width: 54, align: 'right' });
-      doc.text('Amount', 434, y + 4, { width: 54, align: 'right' });
-      doc.text('Extra', 490, y + 4, { width: 32, align: 'right' });
+      doc.text('S.No', 38, y + 4, { width: 18 });
+      doc.text('Brand', 58, y + 4, { width: 105 });
+      doc.text('Size', 165, y + 4, { width: 32 });
+      doc.text('Opn', 198, y + 4, { width: 20, align: 'right' });
+      doc.text('Ind', 220, y + 4, { width: 20, align: 'right' });
+      doc.text('Tot', 242, y + 4, { width: 22, align: 'right' });
+      doc.text('Cls', 266, y + 4, { width: 20, align: 'right' });
+      doc.text('Sale', 288, y + 4, { width: 20, align: 'right' });
+      doc.text('Rate', 310, y + 4, { width: 34, align: 'right' });
+      doc.text('Stock Val', 346, y + 4, { width: 48, align: 'right' });
+      doc.text('Bottle Sales', 396, y + 4, { width: 52, align: 'right' });
+      doc.text('Ex/Btl', 450, y + 4, { width: 34, align: 'right' });
+      doc.text('Extra', 486, y + 4, { width: 36, align: 'right' });
       return y + 16;
     };
 
@@ -233,21 +234,23 @@ const generateClosingReportPdf = (data, stream) => {
       const rt = parseFloat(r.bottleRate || 0);
       const sv = tot * rt;
       const sa = parseFloat(r.saleAmount || 0) || (sl * rt);
-      const ex = parseFloat(r.extraAmount || 0);
+      const exRate = parseFloat(r.extraPerBottle || 0);
+      const ex = exRate > 0 ? (sl * exRate) : parseFloat(r.extraAmount || 0);
 
       doc.fillColor('#1e293b').fontSize(6.5).font('Helvetica');
-      doc.text(String(r.brand?.serialNo || idx + 1), 38, currentY + 3, { width: 20 });
-      doc.font('Helvetica-Bold').text(brandName, 60, currentY + 3, { width: 115 });
-      doc.font('Helvetica').text(sizeName, 178, currentY + 3, { width: 38 });
-      doc.text(String(op), 218, currentY + 3, { width: 22, align: 'right' });
-      doc.text(String(ind), 242, currentY + 3, { width: 22, align: 'right' });
-      doc.text(String(tot), 266, currentY + 3, { width: 24, align: 'right' });
-      doc.text(String(cls), 292, currentY + 3, { width: 22, align: 'right' });
-      doc.font('Helvetica-Bold').text(String(sl), 316, currentY + 3, { width: 22, align: 'right' });
-      doc.font('Helvetica').text(rt.toFixed(2), 340, currentY + 3, { width: 36, align: 'right' });
-      doc.font('Helvetica-Bold').text(sv.toFixed(2), 378, currentY + 3, { width: 54, align: 'right' });
-      doc.font('Helvetica-Bold').fillColor('#059669').text(sa.toFixed(2), 434, currentY + 3, { width: 54, align: 'right' });
-      doc.font('Helvetica').fillColor('#64748b').text(ex > 0 ? ex.toFixed(2) : '-', 490, currentY + 3, { width: 32, align: 'right' });
+      doc.text(String(r.brand?.serialNo || idx + 1), 38, currentY + 3, { width: 18 });
+      doc.font('Helvetica-Bold').text(brandName, 58, currentY + 3, { width: 105 });
+      doc.font('Helvetica').text(sizeName, 165, currentY + 3, { width: 32 });
+      doc.text(String(op), 198, currentY + 3, { width: 20, align: 'right' });
+      doc.text(String(ind), 220, currentY + 3, { width: 20, align: 'right' });
+      doc.text(String(tot), 242, currentY + 3, { width: 22, align: 'right' });
+      doc.text(String(cls), 266, currentY + 3, { width: 20, align: 'right' });
+      doc.font('Helvetica-Bold').text(String(sl), 288, currentY + 3, { width: 20, align: 'right' });
+      doc.font('Helvetica').text(rt.toFixed(2), 310, currentY + 3, { width: 34, align: 'right' });
+      doc.font('Helvetica-Bold').text(sv.toFixed(2), 346, currentY + 3, { width: 48, align: 'right' });
+      doc.font('Helvetica-Bold').fillColor('#059669').text(sa.toFixed(2), 396, currentY + 3, { width: 52, align: 'right' });
+      doc.font('Helvetica').fillColor('#64748b').text(exRate > 0 ? exRate.toFixed(2) : '-', 450, currentY + 3, { width: 34, align: 'right' });
+      doc.font('Helvetica').fillColor('#64748b').text(ex > 0 ? ex.toFixed(2) : '-', 486, currentY + 3, { width: 36, align: 'right' });
 
       currentY += 13;
     });

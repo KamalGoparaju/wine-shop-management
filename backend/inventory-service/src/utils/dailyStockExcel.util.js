@@ -23,7 +23,7 @@ const generateDailyStockExcel = async (data, res) => {
   });
 
   // 1. Title Banner
-  worksheet.mergeCells('A1:P1');
+  worksheet.mergeCells('A1:Q1');
   const titleRow = worksheet.getCell('A1');
   titleRow.value = 'WINE SHOP MANAGEMENT SYSTEM — DAILY STOCK SHEET';
   titleRow.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
@@ -32,7 +32,7 @@ const generateDailyStockExcel = async (data, res) => {
   worksheet.getRow(1).height = 28;
 
   // 2. Metadata row
-  worksheet.mergeCells('A2:P2');
+  worksheet.mergeCells('A2:Q2');
   const metaRow = worksheet.getCell('A2');
   metaRow.value = `Shop: ${shopName} (${shopCode})  |  Business Date: ${businessDate}  |  Generated: ${new Date().toLocaleString('en-IN')}`;
   metaRow.font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FFCBD5E1' } };
@@ -56,9 +56,10 @@ const generateDailyStockExcel = async (data, res) => {
     'Sale',
     'Rate (INR)',
     'Stock Value (INR)',
-    'Sales Amount (INR)',
+    'Bottle Sales Amount (INR)',
+    'Extra Per Bottle (INR)',
+    'Extra Amount (INR)',
     'Remaining Stock Value (INR)',
-    'Extra Amount',
     'Status'
   ];
 
@@ -99,7 +100,8 @@ const generateDailyStockExcel = async (data, res) => {
     const stockValue = total * rate;
     const saleAmount = formatFloat(r.saleAmount) || (sale * rate);
     const remainingStockValue = hasClosing ? closing * rate : null;
-    const extra = formatFloat(r.extraAmount);
+    const extraPerBtl = formatFloat(r.extraPerBottle);
+    const extra = extraPerBtl > 0 ? (sale * extraPerBtl) : formatFloat(r.extraAmount);
 
     totalOpening += opening;
     totalIndent += indent;
@@ -133,8 +135,9 @@ const generateDailyStockExcel = async (data, res) => {
       rate,
       stockValue,
       saleAmount,
-      hasClosing ? remainingStockValue : 'Pending',
+      extraPerBtl,
       extra,
+      hasClosing ? remainingStockValue : 'Pending',
       r.status || 'DRAFT'
     ]);
 
@@ -152,7 +155,7 @@ const generateDailyStockExcel = async (data, res) => {
       };
 
       // Alignments & Number formats
-      if (colNumber === 1 || colNumber === 2 || colNumber === 16) {
+      if (colNumber === 1 || colNumber === 2 || colNumber === 17) {
         cell.alignment = { vertical: 'middle', horizontal: 'center' };
       } else if (colNumber === 3) {
         cell.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -171,22 +174,70 @@ const generateDailyStockExcel = async (data, res) => {
           cell.numFmt = '#,##0';
         }
         if (colNumber === 10) cell.font = { bold: true, color: { argb: 'FFD97706' } };
-      } else if (colNumber >= 11 && colNumber <= 15) {
+      } else if (colNumber >= 11 && colNumber <= 16) {
         cell.alignment = { vertical: 'middle', horizontal: 'right' };
-        if (colNumber === 14 && !hasClosing) {
+        if (colNumber === 16 && !hasClosing) {
           cell.alignment = { vertical: 'middle', horizontal: 'center' };
           cell.font = { italic: true, color: { argb: 'FFD97706' } };
         } else {
           cell.numFmt = '₹#,##0.00';
         }
         if (colNumber === 12) cell.font = { bold: true, color: { argb: 'FF1E293B' } }; // Stock Value
-        if (colNumber === 13) cell.font = { bold: true, color: { argb: 'FF059669' } }; // Sales Amount
-        if (colNumber === 14 && hasClosing) cell.font = { bold: true, color: { argb: 'FF4338CA' } }; // Remaining Stock Value
+        if (colNumber === 13) cell.font = { bold: true, color: { argb: 'FF059669' } }; // Bottle Sales Amount
+        if (colNumber === 14) cell.font = { bold: true, color: { argb: 'FFD97706' } }; // Extra Per Bottle
+        if (colNumber === 15) cell.font = { bold: true, color: { argb: 'FF64748B' } }; // Extra Amount
+        if (colNumber === 16 && hasClosing) cell.font = { bold: true, color: { argb: 'FF4338CA' } }; // Remaining Stock Value
       }
     });
   });
 
-  // 5. Daily Totals Row
+  // Group contiguous brand rows and merge S.No (Col C / 3) and Brand Name (Col D / 4)
+  const brandGroups = [];
+  records.forEach((r, idx) => {
+    const brandId = r.brandId || r.brand?.id || (r.brand && r.brand.name) || r.brandName || idx;
+    const lastGroup = brandGroups[brandGroups.length - 1];
+    if (lastGroup && lastGroup.brandId === brandId) {
+      lastGroup.endIdx = idx;
+      lastGroup.count++;
+    } else {
+      brandGroups.push({
+        brandId,
+        startIdx: idx,
+        endIdx: idx,
+        count: 1
+      });
+    }
+  });
+
+  const startRowNumber = 5; // Header is row 4, first data row is row 5
+
+  brandGroups.forEach(group => {
+    const fromRow = startRowNumber + group.startIdx;
+    const toRow = startRowNumber + group.endIdx;
+
+    if (group.count > 1) {
+      // Merge S.No (Col 3 / C)
+      worksheet.mergeCells(`C${fromRow}:C${toRow}`);
+      const snoCell = worksheet.getCell(`C${fromRow}`);
+      snoCell.alignment = { vertical: 'middle', horizontal: 'center' };
+
+      // Merge Brand Name (Col 4 / D)
+      worksheet.mergeCells(`D${fromRow}:D${toRow}`);
+      const brandCell = worksheet.getCell(`D${fromRow}`);
+      brandCell.alignment = { vertical: 'middle', horizontal: 'left' };
+    }
+
+    // Set distinct border under the last row of each brand group
+    const lastRow = worksheet.getRow(toRow);
+    for (let c = 1; c <= 17; c++) {
+      const cell = lastRow.getCell(c);
+      cell.border = {
+        ...cell.border,
+        bottom: { style: 'medium', color: { argb: 'FF94A3B8' } }
+      };
+    }
+  });
+
   // 5. Daily Totals Row (Totals Grid)
   const totalsRow = worksheet.addRow([
     'DAILY TOTALS',
@@ -202,8 +253,9 @@ const generateDailyStockExcel = async (data, res) => {
     '',
     totalStockValue,
     totalSalesAmount,
-    totalRemainingStockValue,
+    '',
     totalExtraAmount,
+    totalRemainingStockValue,
     allCompleted ? 'COMPLETED' : 'PENDING'
   ]);
   totalsRow.height = 24;
@@ -224,7 +276,7 @@ const generateDailyStockExcel = async (data, res) => {
     } else if (colNumber >= 6 && colNumber <= 10) {
       cell.alignment = { vertical: 'middle', horizontal: 'right' };
       cell.numFmt = '#,##0';
-    } else if (colNumber >= 12 && colNumber <= 15) {
+    } else if (colNumber >= 12 && colNumber <= 16) {
       cell.alignment = { vertical: 'middle', horizontal: 'right' };
       cell.numFmt = '₹#,##0.00';
     } else {
@@ -250,12 +302,12 @@ const generateDailyStockExcel = async (data, res) => {
     ['Total Closing Bottles Remaining:', totalClosing, '#,##0'],
     ['Total Bottles Sold:', totalSale, '#,##0'],
     ['Total Available Stock Valuation (Total Qty × Rate):', totalStockValue, '₹#,##0.00'],
-    ['Total Daily Sales Amount (Revenue):', totalSalesAmount, '₹#,##0.00'],
+    ['Total Daily Bottle Sales Amount (Revenue):', totalSalesAmount, '₹#,##0.00'],
     ['Total Remaining Stock Valuation (Closing Qty × Rate):', totalRemainingStockValue, '₹#,##0.00'],
     ['Reconciliation Identity (Stock Value = Sales + Remaining):', isReconciled ? 'VERIFIED (Exact Match)' : 'PENDING (Unentered Closings)', '@'],
     ['Total Extra Amount (Recorded Separately):', totalExtraAmount, '₹#,##0.00'],
     ['Combined Informational Total (Sales + Extra Amount):', combinedTotal, '₹#,##0.00'],
-    ['Sales & Extra Amount Breakdown Formula:', `Sales Amount (₹${totalSalesAmount.toFixed(2)}) + Extra Total Amount (₹${totalExtraAmount.toFixed(2)}) = Combined Total Amount (₹${combinedTotal.toFixed(2)})`, '@']
+    ['Sales & Extra Amount Breakdown Formula:', `Bottle Sales Amount (₹${totalSalesAmount.toFixed(2)}) + Extra Total Amount (₹${totalExtraAmount.toFixed(2)}) = Combined Total Amount (₹${combinedTotal.toFixed(2)})`, '@']
   ];
 
   summaryItems.forEach(([label, value, numFmt]) => {
@@ -266,7 +318,7 @@ const generateDailyStockExcel = async (data, res) => {
     sRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left' };
     sRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
 
-    const isSales = label.includes('Sales Amount (Revenue)');
+    const isSales = label.includes('Bottle Sales Amount');
     const isRemaining = label.includes('Remaining Stock');
     const isReconcile = label.includes('Reconciliation');
     const isCombined = label.includes('Combined Informational Total');
@@ -291,8 +343,8 @@ const generateDailyStockExcel = async (data, res) => {
     valCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
   });
 
-  const noteRow = worksheet.addRow(['* Notice: Total Stock Value represents available inventory valuation before deducting sales. Total Sales Amount represents official daily gross sales revenue. Total Remaining Stock Value represents inventory on hand at close. Total Stock Value = Total Sales Amount + Total Remaining Stock Value. Extra Amount is recorded separately for tracking and strictly excluded from official closing revenue & collections.']);
-  worksheet.mergeCells(`A${noteRow.number}:P${noteRow.number}`);
+  const noteRow = worksheet.addRow(['* Notice: Total Stock Value represents available inventory valuation before deducting sales. Total Bottle Sales Amount represents official daily gross sales revenue. Total Remaining Stock Value represents inventory on hand at close. Total Stock Value = Total Bottle Sales Amount + Total Remaining Stock Value. Extra Amount is calculated automatically (Sale Quantity × Extra Per Bottle) and recorded separately for tracking, strictly excluded from official closing revenue & collections.']);
+  worksheet.mergeCells(`A${noteRow.number}:Q${noteRow.number}`);
   noteRow.getCell(1).font = { name: 'Calibri', size: 8.5, italic: true, color: { argb: 'FF64748B' } };
 
   // 7. Column Widths
@@ -309,9 +361,10 @@ const generateDailyStockExcel = async (data, res) => {
     { width: 12 }, // Sale
     { width: 14 }, // Rate
     { width: 20 }, // Stock Value
-    { width: 20 }, // Sales Amount
+    { width: 22 }, // Bottle Sales Amount
+    { width: 18 }, // Extra Per Bottle
+    { width: 18 }, // Extra Amount
     { width: 22 }, // Remaining Stock Value
-    { width: 14 }, // Extra Amount
     { width: 14 }  // Status
   ];
 

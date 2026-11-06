@@ -164,7 +164,9 @@ test('ExcelJS Daily Stock Workbook: Generates valid .xlsx structure with Stock V
   const headerRow = worksheet.getRow(4);
   const headerValues = headerRow.values;
   assert.ok(headerValues.includes('Stock Value (INR)'), 'Header must contain "Stock Value (INR)" column');
-  assert.ok(headerValues.includes('Sales Amount (INR)'), 'Header must contain "Sales Amount (INR)" column');
+  assert.ok(headerValues.includes('Bottle Sales Amount (INR)'), 'Header must contain "Bottle Sales Amount (INR)" column');
+  assert.ok(headerValues.includes('Extra Per Bottle (INR)'), 'Header must contain "Extra Per Bottle (INR)" column');
+  assert.ok(headerValues.includes('Extra Amount (INR)'), 'Header must contain "Extra Amount (INR)" column');
   assert.ok(headerValues.includes('Remaining Stock Value (INR)'), 'Header must contain "Remaining Stock Value (INR)" column');
   assert.ok(headerValues.includes('Total Quantity'), 'Header must contain "Total Quantity" column');
 

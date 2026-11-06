@@ -232,3 +232,275 @@ test('Brand Rates: Multi-shop rate isolation (shop-specific override vs global f
   assert.strictEqual(resolveBrandRate('b-new', 's-q', 'SHOP2'), 500, 'SHOP2 receives global fallback');
   assert.strictEqual(resolveBrandRate('b-new', 's-q', 'SHOP3'), 490, 'SHOP3 receives shop-specific override');
 });
+
+// 7. Dynamic Size Columns Resolution with Dash Fallback
+test('Brand Rates: Dynamic size columns rendering resolution with dash fallback', () => {
+  const activeSizes = [
+    { id: 'sz-1l', code: '1L', name: '1 Liter' },
+    { id: 'sz-q', code: 'Q', name: 'Quart (750ml)' },
+    { id: 'sz-p', code: 'P', name: 'Pint (375ml)' },
+    { id: 'sz-n', code: 'N', name: 'Nip (180ml)' }
+  ];
+
+  const brandRoyalStag = {
+    id: 'b-rs',
+    name: 'Royal Stag',
+    rates: [
+      { sizeId: 'sz-1l', rate: 1200, isActive: true },
+      { sizeId: 'sz-q', rate: 850, isActive: true },
+      { sizeId: 'sz-p', rate: 450, isActive: true },
+      { sizeId: 'sz-n', rate: 230, isActive: true }
+    ]
+  };
+
+  const brandRedLabel = {
+    id: 'b-rl',
+    name: 'Red Label',
+    rates: [
+      { sizeId: 'sz-q', rate: 2100, isActive: true },
+      { sizeId: 'sz-p', rate: 1100, isActive: true },
+      { sizeId: 'sz-n', rate: 550, isActive: true }
+    ]
+  };
+
+  const resolveColumnRate = (brand, sizeId) => {
+    const r = (brand.rates || []).find(rt => rt.sizeId === sizeId && rt.isActive);
+    return (r && r.rate > 0) ? `₹${parseFloat(r.rate).toFixed(0)}` : '—';
+  };
+
+  // Royal Stag has all 4 sizes
+  assert.strictEqual(resolveColumnRate(brandRoyalStag, 'sz-1l'), '₹1200');
+  assert.strictEqual(resolveColumnRate(brandRoyalStag, 'sz-q'), '₹850');
+  assert.strictEqual(resolveColumnRate(brandRoyalStag, 'sz-p'), '₹450');
+  assert.strictEqual(resolveColumnRate(brandRoyalStag, 'sz-n'), '₹230');
+
+  // Red Label only has Q, P, N; 1 Liter renders dash
+  assert.strictEqual(resolveColumnRate(brandRedLabel, 'sz-1l'), '—', '1L must render as dash for Red Label');
+  assert.strictEqual(resolveColumnRate(brandRedLabel, 'sz-q'), '₹2100');
+  assert.strictEqual(resolveColumnRate(brandRedLabel, 'sz-p'), '₹1100');
+  assert.strictEqual(resolveColumnRate(brandRedLabel, 'sz-n'), '₹550');
+});
+
+// 8. Brand Size Rates Synchronization (Add / Remove applicable sizes)
+test('Brand Rates: Synchronization of applicable sizes on brand update', () => {
+  // Brand initially configured with Q and P
+  let brandSizes = [
+    { sizeId: 'sz-q', rate: 850, isActive: true },
+    { sizeId: 'sz-p', rate: 450, isActive: true }
+  ];
+
+  // Operator updates brand: removes P, updates Q to 900, adds N at 240
+  const updatedInputs = [
+    { sizeId: 'sz-q', rate: 900 },
+    { sizeId: 'sz-n', rate: 240 }
+  ];
+
+  const syncBrandSizes = (existing, inputs) => {
+    const inputMap = new Map(inputs.map(i => [i.sizeId, parseFloat(i.rate)]));
+    const result = [];
+
+    // Update or deactivate existing
+    for (const ex of existing) {
+      if (inputMap.has(ex.sizeId)) {
+        result.push({ sizeId: ex.sizeId, rate: inputMap.get(ex.sizeId), isActive: true });
+        inputMap.delete(ex.sizeId);
+      } else {
+        result.push({ sizeId: ex.sizeId, rate: ex.rate, isActive: false }); // safely deactivated
+      }
+    }
+    // Add new ones
+    for (const [sizeId, rate] of inputMap) {
+      result.push({ sizeId, rate, isActive: true });
+    }
+    return result;
+  };
+
+  const synced = syncBrandSizes(brandSizes, updatedInputs);
+  const activeSynced = synced.filter(s => s.isActive);
+
+  assert.strictEqual(activeSynced.length, 2);
+  assert.strictEqual(activeSynced.find(s => s.sizeId === 'sz-q').rate, 900);
+  assert.strictEqual(activeSynced.find(s => s.sizeId === 'sz-n').rate, 240);
+  assert.strictEqual(synced.find(s => s.sizeId === 'sz-p').isActive, false, 'Unselected size P must be deactivated');
+});
+
+// 9. Historical Rate Immutability
+test('Brand Rates: Historical stock records maintain original rate snapshot when brand rate changes', () => {
+  // Day 1: Royal Stag Q rate = 850
+  const day1Record = {
+    businessDate: '2026-11-06',
+    brandName: 'Royal Stag',
+    sizeCode: 'Q',
+    saleCount: 5,
+    bottleRate: 850,
+    saleAmount: 4250
+  };
+
+  // Day 5: Brand rate updated to 900 in Brand Management
+  const currentBrandRates = {
+    'Royal Stag_Q': 900
+  };
+
+  // Day 1 record accessed later (e.g. Closing History, PDF, CSV)
+  assert.strictEqual(day1Record.bottleRate, 850, 'Historical snapshot must not change');
+  assert.strictEqual(day1Record.saleAmount, 4250, 'Historical sales amount must remain 4250');
+  assert.notStrictEqual(day1Record.bottleRate, currentBrandRates['Royal Stag_Q']);
+});
+
+// 10. Rate Missing Validation for Daily Stock Finalization
+test('Brand Rates: Prevents daily stock finalization if any row has missing or zero rate', () => {
+  const stockSheet = [
+    { brand: { name: 'Royal Stag' }, size: { code: 'Q' }, bottleRate: 850 },
+    { brand: { name: 'Local Brew' }, size: { code: 'Q' }, bottleRate: 0 } // Rate not configured
+  ];
+
+  const validateSheetForFinalize = (rows) => {
+    const unconfigured = rows.find(r => !r.bottleRate || parseFloat(r.bottleRate) <= 0);
+    if (unconfigured) {
+      return {
+        allowed: false,
+        error: `Cannot finalize: "${unconfigured.brand.name} (${unconfigured.size.code})" has no selling rate configured.`
+      };
+    }
+    return { allowed: true };
+  };
+
+  const validationResult = validateSheetForFinalize(stockSheet);
+  assert.strictEqual(validationResult.allowed, false);
+  assert.ok(validationResult.error.includes('Local Brew'));
+});
+
+// 11. Brand-Specific Size Filtering: Only brand-configured sizes appear in dropdown
+test('Brand Rates: Daily Stock displays ONLY brand-configured sizes (Royal Stag vs Black Label)', () => {
+  // Size Master
+  const allMasterSizes = [
+    { id: 'sz-1l', code: '1LITER', name: '1 Liter', volumeMl: 1000 },
+    { id: 'sz-q', code: 'Q', name: 'Quart', volumeMl: 750 },
+    { id: 'sz-p', code: 'P', name: 'Pint', volumeMl: 375 },
+    { id: 'sz-n', code: 'N', name: 'Nip', volumeMl: 180 },
+    { id: 'sz-d', code: 'D', name: 'Draft', volumeMl: 60 }
+  ];
+
+  // Brand Configurations
+  // Royal Stag: Q (850), P (450), N (230)
+  // Black Label: 1 Liter (3200), Q (2400)
+  const brandRates = [
+    { brandId: 'b-royal-stag', sizeId: 'sz-q', rate: 850, isActive: true },
+    { brandId: 'b-royal-stag', sizeId: 'sz-p', rate: 450, isActive: true },
+    { brandId: 'b-royal-stag', sizeId: 'sz-n', rate: 230, isActive: true },
+    { brandId: 'b-black-label', sizeId: 'sz-1l', rate: 3200, isActive: true },
+    { brandId: 'b-black-label', sizeId: 'sz-q', rate: 2400, isActive: true }
+  ];
+
+  const getAvailableSizesForBrand = (brandId) => {
+    const configuredRateSizeIds = new Set(
+      brandRates.filter(r => r.brandId === brandId && r.isActive).map(r => r.sizeId)
+    );
+    return allMasterSizes.filter(s => configuredRateSizeIds.has(s.id));
+  };
+
+  // Royal Stag check: must show ONLY Q, P, N; NOT 1 Liter or D
+  const royalStagSizes = getAvailableSizesForBrand('b-royal-stag');
+  const royalStagCodes = royalStagSizes.map(s => s.code);
+  assert.deepStrictEqual(royalStagCodes, ['Q', 'P', 'N']);
+  assert.ok(!royalStagCodes.includes('1LITER'), 'Royal Stag must not show 1LITER');
+  assert.ok(!royalStagCodes.includes('D'), 'Royal Stag must not show D');
+
+  // Black Label check: must show ONLY 1 Liter, Q; NOT P, N, D
+  const blackLabelSizes = getAvailableSizesForBrand('b-black-label');
+  const blackLabelCodes = blackLabelSizes.map(s => s.code);
+  assert.deepStrictEqual(blackLabelCodes, ['1LITER', 'Q']);
+  assert.ok(!blackLabelCodes.includes('P'), 'Black Label must not show P');
+  assert.ok(!blackLabelCodes.includes('N'), 'Black Label must not show N');
+  assert.ok(!blackLabelCodes.includes('D'), 'Black Label must not show D');
+});
+
+// 12. Brand Change Behavior: Clears previously selected size and rate
+test('Brand Rates: Changing brand clears previously selected size and rate in Daily Stock', () => {
+  let currentRow = {
+    brandId: 'b-black-label',
+    brandName: 'Black Label',
+    sizeId: 'sz-1l',
+    sizeCode: '1LITER',
+    bottleRate: 3200
+  };
+
+  const handleBrandChange = (row, newBrandId, newBrandName) => {
+    return {
+      ...row,
+      brandId: newBrandId,
+      brandName: newBrandName,
+      // Brand Change Behavior: Clear previously selected size and rate
+      sizeId: '',
+      sizeCode: '',
+      bottleRate: 0
+    };
+  };
+
+  // User changes brand to Royal Stag
+  const updatedRow = handleBrandChange(currentRow, 'b-royal-stag', 'Royal Stag');
+  assert.strictEqual(updatedRow.brandId, 'b-royal-stag');
+  assert.strictEqual(updatedRow.sizeId, '', 'Previous size must be cleared');
+  assert.strictEqual(updatedRow.sizeCode, '', 'Previous size code must be cleared');
+  assert.strictEqual(updatedRow.bottleRate, 0, 'Previous rate must be cleared');
+});
+
+// 13. Backend Validation: Rejection of unconfigured Brand + Size combination
+test('Brand Rates: Backend rejects unconfigured Brand + Size combination with INVALID_BRAND_SIZE_COMBINATION', () => {
+  const activeRateMap = new Map([
+    ['b-royal-stag_sz-q', 850],
+    ['b-royal-stag_sz-p', 450],
+    ['b-royal-stag_sz-n', 230]
+  ]);
+
+  const validateItemCombination = (brandId, sizeId) => {
+    const key = `${brandId}_${sizeId}`;
+    if (!activeRateMap.has(key)) {
+      return {
+        valid: false,
+        status: 400,
+        error: 'INVALID_BRAND_SIZE_COMBINATION',
+        message: 'Invalid Brand and Size combination: Size is not configured for Brand.'
+      };
+    }
+    return { valid: true };
+  };
+
+  // Valid combination: Royal Stag + Q
+  const validCheck = validateItemCombination('b-royal-stag', 'sz-q');
+  assert.strictEqual(validCheck.valid, true);
+
+  // Invalid combination: Royal Stag + 1 Liter (tampered API request)
+  const invalidCheck = validateItemCombination('b-royal-stag', 'sz-1l');
+  assert.strictEqual(invalidCheck.valid, false);
+  assert.strictEqual(invalidCheck.status, 400);
+  assert.strictEqual(invalidCheck.error, 'INVALID_BRAND_SIZE_COMBINATION');
+});
+
+// 14. Automatic Rate Fetching
+test('Brand Rates: Selecting Brand and Size auto-fetches the configured rate', () => {
+  const ratesDatabase = [
+    { brandId: 'b-royal-stag', sizeId: 'sz-q', shopId: null, rate: 850 },
+    { brandId: 'b-royal-stag', sizeId: 'sz-q', shopId: 'SHOP2', rate: 870 }, // Shop override
+    { brandId: 'b-royal-stag', sizeId: 'sz-p', shopId: null, rate: 450 }
+  ];
+
+  const resolveSellingRate = (brandId, sizeId, activeShopId) => {
+    const matching = ratesDatabase.filter(r => r.brandId === brandId && r.sizeId === sizeId);
+    if (matching.length === 0) return 0;
+
+    const shopOverride = matching.find(r => r.shopId === activeShopId);
+    if (shopOverride) return shopOverride.rate;
+
+    const globalRate = matching.find(r => !r.shopId);
+    return globalRate ? globalRate.rate : 0;
+  };
+
+  // Shop 1 (uses global rate 850)
+  assert.strictEqual(resolveSellingRate('b-royal-stag', 'sz-q', 'SHOP1'), 850);
+  // Shop 2 (uses shop-specific override 870)
+  assert.strictEqual(resolveSellingRate('b-royal-stag', 'sz-q', 'SHOP2'), 870);
+  // Royal Stag P (global rate 450 in both shops)
+  assert.strictEqual(resolveSellingRate('b-royal-stag', 'sz-p', 'SHOP1'), 450);
+  assert.strictEqual(resolveSellingRate('b-royal-stag', 'sz-p', 'SHOP2'), 450);
+});

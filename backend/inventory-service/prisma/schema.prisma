@@ -80,9 +80,10 @@ model DailyStockRecord {
   totalStock   Int      @default(0) @map("total_stock")
   closingStock Int      @default(0) @map("closing_stock")
   saleCount    Int      @default(0) @map("sale_count")
-  bottleRate   Decimal  @map("bottle_rate") @db.Decimal(10, 2)
-  saleAmount   Decimal  @map("sale_amount") @db.Decimal(10, 2)
-  extraAmount  Decimal  @default(0) @map("extra_amount") @db.Decimal(10, 2)
+  bottleRate     Decimal  @map("bottle_rate") @db.Decimal(10, 2)
+  saleAmount     Decimal  @map("sale_amount") @db.Decimal(10, 2)
+  extraPerBottle Decimal  @default(0) @map("extra_per_bottle") @db.Decimal(10, 2)
+  extraAmount    Decimal  @default(0) @map("extra_amount") @db.Decimal(10, 2)
   status       String   @default("DRAFT")
   notes        String?
   createdAt    DateTime @default(now())

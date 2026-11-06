@@ -910,8 +910,9 @@ const ClosingHistory = () => {
                             <th className="w-16 text-center">Closing</th>
                             <th className="w-16 text-center" style={{ color: activeTheme.primary }}>Sale</th>
                             <th className="w-20 text-right">Rate</th>
-                            <th className="w-24 text-right text-emerald-700">Amount (₹)</th>
-                            <th className="w-20 text-right text-slate-400">Extra Amt*</th>
+                            <th className="w-24 text-right text-emerald-700">Bottle Sales (₹)</th>
+                            <th className="w-20 text-right text-amber-600">Extra / Btl (₹)</th>
+                            <th className="w-20 text-right text-slate-400">Extra Amt (₹)*</th>
                           </tr>
                         </thead>
                         <tbody className="text-xs">
@@ -934,6 +935,9 @@ const ClosingHistory = () => {
                               <td className="text-right text-slate-600">₹{row.bottleRate}</td>
                               <td className="text-right font-bold text-emerald-700 font-sans">
                                 ₹{parseFloat(row.saleAmount || 0).toFixed(2)}
+                              </td>
+                              <td className="text-right font-semibold text-amber-600">
+                                ₹{parseFloat(row.extraPerBottle || 0).toFixed(2)}
                               </td>
                               <td className="text-right text-slate-400">
                                 ₹{parseFloat(row.extraAmount || 0).toFixed(2)}

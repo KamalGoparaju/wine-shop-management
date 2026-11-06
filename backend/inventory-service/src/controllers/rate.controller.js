@@ -57,30 +57,43 @@ const upsertRate = async (req, res, next) => {
       });
     }
 
-    const rateRecord = await prisma.brandSizeRate.upsert({
+    const targetShopId = shopId || null;
+    const existing = await prisma.brandSizeRate.findFirst({
       where: {
-        brandId_sizeId_shopId: {
-          brandId,
-          sizeId,
-          shopId
-        }
-      },
-      update: {
-        rate: numericRate,
-        isActive: true
-      },
-      create: {
         brandId,
         sizeId,
-        rate: numericRate,
-        shopId,
-        isActive: true
-      },
-      include: {
-        brand: true,
-        size: true
+        shopId: targetShopId
       }
     });
+
+    let rateRecord;
+    if (existing) {
+      rateRecord = await prisma.brandSizeRate.update({
+        where: { id: existing.id },
+        data: {
+          rate: numericRate,
+          isActive: true
+        },
+        include: {
+          brand: true,
+          size: true
+        }
+      });
+    } else {
+      rateRecord = await prisma.brandSizeRate.create({
+        data: {
+          brandId,
+          sizeId,
+          rate: numericRate,
+          shopId: targetShopId,
+          isActive: true
+        },
+        include: {
+          brand: true,
+          size: true
+        }
+      });
+    }
 
     return res.status(200).json({
       success: true,
