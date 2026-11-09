@@ -730,6 +730,51 @@ const saveDailyStockSheet = async (req, res, next) => {
           error: 'INCOMPLETE_CLOSING_ENTRY'
         });
       }
+
+      const zeroRateItem = allDayRecords.find(r => !r.bottleRate || parseFloat(r.bottleRate) <= 0);
+      if (zeroRateItem) {
+        return res.status(400).json({
+          success: false,
+          message: `Selling rate is missing or zero for Brand '${zeroRateItem.brand?.name || 'Item'}' (${zeroRateItem.size?.code || ''}). Rates must be configured before finalizing daily closing.`,
+          error: 'RATE_MISSING'
+        });
+      }
+
+      // Mark ALL records for this day and shop as COMPLETED so paginated rows aren't left in DRAFT
+      await prisma.dailyStockRecord.updateMany({
+        where: {
+          shopId,
+          businessDate: targetDate,
+          status: { not: 'LOCKED' }
+        },
+        data: {
+          status: 'COMPLETED'
+        }
+      });
+
+      allDayRecords.forEach(r => {
+        if (r.status !== 'LOCKED') {
+          r.status = 'COMPLETED';
+        }
+      });
+    } else if (status === 'DRAFT') {
+      // If explicitly saving as DRAFT, ensure non-locked records for this day and shop are marked DRAFT
+      await prisma.dailyStockRecord.updateMany({
+        where: {
+          shopId,
+          businessDate: targetDate,
+          status: { not: 'LOCKED' }
+        },
+        data: {
+          status: 'DRAFT'
+        }
+      });
+
+      allDayRecords.forEach(r => {
+        if (r.status !== 'LOCKED') {
+          r.status = 'DRAFT';
+        }
+      });
     }
 
     // Compute authoritative shop-wide totals

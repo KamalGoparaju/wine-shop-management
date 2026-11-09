@@ -354,6 +354,17 @@ const confirmImportBatch = async (req, res, next) => {
       }
     });
 
+    if (status === 'COMPLETED') {
+      await prisma.dailyStockRecord.updateMany({
+        where: {
+          shopId,
+          businessDate: targetDate,
+          status: { not: 'LOCKED' }
+        },
+        data: { status: 'COMPLETED' }
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: `Successfully imported and verified ${importedCount} stock records.`,
