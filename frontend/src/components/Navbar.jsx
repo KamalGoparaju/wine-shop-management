@@ -1,12 +1,14 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Store, Menu } from 'lucide-react';
+import { useBusinessDate } from '../context/DateContext';
+import { Store, Menu, Calendar } from 'lucide-react';
 import ThemeSelector from './ThemeSelector';
 
 const Navbar = ({ title, onToggleSidebar }) => {
   const { user, shops, selectedShop, switchShop } = useAuth();
   const { activeTheme } = useTheme();
+  const { businessDate, setBusinessDate, resetToToday, isToday } = useBusinessDate();
 
   const handleShopChange = (e) => {
     const shopId = e.target.value;
@@ -76,6 +78,46 @@ const Navbar = ({ title, onToggleSidebar }) => {
             </span>
           </div>
         ) : null}
+
+        {/* Global Business Date Selector in Header */}
+        <div
+          className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border rounded-xl px-2 sm:px-3 py-1 sm:py-1.5 shadow-xs transition-colors"
+          style={{ borderColor: activeTheme.border }}
+        >
+          <Calendar
+            className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
+            style={{ color: activeTheme.primary }}
+          />
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <span
+                className="text-[9px] font-bold uppercase tracking-wider leading-none hidden xs:inline"
+                style={{ color: activeTheme.primary }}
+              >
+                Date
+              </span>
+              {!isToday && (
+                <button
+                  type="button"
+                  onClick={resetToToday}
+                  className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors leading-none cursor-pointer"
+                  title="Jump to today"
+                >
+                  Today
+                </button>
+              )}
+            </div>
+            <input
+              type="date"
+              value={businessDate}
+              onChange={(e) => {
+                if (e.target.value) setBusinessDate(e.target.value);
+              }}
+              className="bg-transparent text-slate-800 font-bold text-xs focus:outline-none cursor-pointer w-[110px] sm:w-[125px]"
+              aria-label="Select global business date"
+            />
+          </div>
+        </div>
 
         {/* Dynamic Theme Color Selector in Navbar */}
         <ThemeSelector variant="navbar" />

@@ -30,6 +30,7 @@ import {
 import { Link } from 'react-router-dom';
 import { downloadAuthenticatedFile } from '../utils/download';
 import { useTheme } from '../context/ThemeContext';
+import { useBusinessDate } from '../context/DateContext';
 import Pagination from '../components/Pagination';
 import usePagination from '../hooks/usePagination';
 import DailyStockImportModal from '../components/stock/DailyStockImportModal';
@@ -38,7 +39,7 @@ import ErrorBoundary from '../components/ErrorBoundary';
 const DailyStock = () => {
   const { selectedShop } = useAuth();
   const { activeTheme } = useTheme();
-  const [businessDate, setBusinessDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const { businessDate, setBusinessDate } = useBusinessDate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

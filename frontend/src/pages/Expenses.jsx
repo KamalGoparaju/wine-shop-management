@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import apiClient from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useBusinessDate } from '../context/DateContext';
 import { 
   Receipt, 
   Plus, 
@@ -25,7 +26,7 @@ import usePagination from '../hooks/usePagination';
 const Expenses = () => {
   const { selectedShop } = useAuth();
   const { activeTheme } = useTheme();
-  const [businessDate, setBusinessDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const { businessDate, setBusinessDate } = useBusinessDate();
   const [expenses, setExpenses] = useState([]);
   const [totalAmount, setTotalAmount] = useState('0.00');
   const [loading, setLoading] = useState(true);

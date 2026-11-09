@@ -25,11 +25,12 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useBusinessDate } from '../context/DateContext';
 
 const Dashboard = () => {
   const { selectedShop } = useAuth();
   const { activeTheme } = useTheme();
-  const [businessDate, setBusinessDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const { businessDate, setBusinessDate } = useBusinessDate();
 
   const [dailyRecords, setDailyRecords] = useState([]);
   const [expenses, setExpenses] = useState([]);

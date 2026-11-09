@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { DateProvider } from './context/DateContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import Login from './pages/Login';
@@ -23,9 +24,10 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <Router>
-          <ErrorBoundary>
-            <Routes>
+        <DateProvider>
+          <Router>
+            <ErrorBoundary>
+              <Routes>
           {/* Public Route */}
           <Route path="/login" element={<Login />} />
 
@@ -140,6 +142,7 @@ function App() {
         </Routes>
         </ErrorBoundary>
       </Router>
+      </DateProvider>
     </ThemeProvider>
   </AuthProvider>
 );
