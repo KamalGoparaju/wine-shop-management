@@ -196,19 +196,19 @@ const generateClosingReportPdf = (data, stream) => {
     const drawStockHeader = (y) => {
       doc.rect(36, y, 523, 16).fill('#1e293b');
       doc.fillColor('#ffffff').fontSize(6.5).font('Helvetica-Bold');
-      doc.text('S.No', 38, y + 4, { width: 18 });
-      doc.text('Brand', 58, y + 4, { width: 105 });
-      doc.text('Size', 165, y + 4, { width: 32 });
-      doc.text('Opn', 198, y + 4, { width: 20, align: 'right' });
-      doc.text('Ind', 220, y + 4, { width: 20, align: 'right' });
-      doc.text('Tot', 242, y + 4, { width: 22, align: 'right' });
-      doc.text('Cls', 266, y + 4, { width: 20, align: 'right' });
-      doc.text('Sale', 288, y + 4, { width: 20, align: 'right' });
-      doc.text('Rate', 310, y + 4, { width: 34, align: 'right' });
-      doc.text('Stock Val', 346, y + 4, { width: 48, align: 'right' });
-      doc.text('Bottle Sales', 396, y + 4, { width: 52, align: 'right' });
-      doc.text('Ex/Btl', 450, y + 4, { width: 34, align: 'right' });
-      doc.text('Extra', 486, y + 4, { width: 36, align: 'right' });
+      doc.text('S.No', 38, y + 4, { width: 16 });
+      doc.text('Brand', 56, y + 4, { width: 96 });
+      doc.text('Size', 154, y + 4, { width: 54 });
+      doc.text('Opn', 210, y + 4, { width: 22, align: 'right' });
+      doc.text('Ind', 234, y + 4, { width: 22, align: 'right' });
+      doc.text('Tot', 258, y + 4, { width: 24, align: 'right' });
+      doc.text('Cls', 284, y + 4, { width: 22, align: 'right' });
+      doc.text('Sale', 308, y + 4, { width: 22, align: 'right' });
+      doc.text('Rate', 332, y + 4, { width: 36, align: 'right' });
+      doc.text('Stock Val', 370, y + 4, { width: 48, align: 'right' });
+      doc.text('Bottle Sales', 420, y + 4, { width: 50, align: 'right' });
+      doc.text('Ex/Btl', 472, y + 4, { width: 36, align: 'right' });
+      doc.text('Extra', 510, y + 4, { width: 44, align: 'right' });
       return y + 16;
     };
 
@@ -221,8 +221,8 @@ const generateClosingReportPdf = (data, stream) => {
       }
 
       const bg = idx % 2 === 0 ? '#f8fafc' : '#ffffff';
-      doc.rect(36, currentY, 523, 13).fill(bg);
-      doc.rect(36, currentY + 12, 523, 1).fill('#e2e8f0');
+      doc.rect(36, currentY, 523, 15).fill(bg);
+      doc.rect(36, currentY + 14, 523, 0.5).fill('#e2e8f0');
 
       const brandName = (r.brand && r.brand.name) || r.brandName || `Item #${idx + 1}`;
       const sizeName = (r.size && (r.size.name || r.size.code)) || r.sizeName || '-';
@@ -238,21 +238,21 @@ const generateClosingReportPdf = (data, stream) => {
       const ex = exRate > 0 ? (sl * exRate) : parseFloat(r.extraAmount || 0);
 
       doc.fillColor('#1e293b').fontSize(6.5).font('Helvetica');
-      doc.text(String(r.brand?.serialNo || idx + 1), 38, currentY + 3, { width: 18 });
-      doc.font('Helvetica-Bold').text(brandName, 58, currentY + 3, { width: 105 });
-      doc.font('Helvetica').text(sizeName, 165, currentY + 3, { width: 32 });
-      doc.text(String(op), 198, currentY + 3, { width: 20, align: 'right' });
-      doc.text(String(ind), 220, currentY + 3, { width: 20, align: 'right' });
-      doc.text(String(tot), 242, currentY + 3, { width: 22, align: 'right' });
-      doc.text(String(cls), 266, currentY + 3, { width: 20, align: 'right' });
-      doc.font('Helvetica-Bold').text(String(sl), 288, currentY + 3, { width: 20, align: 'right' });
-      doc.font('Helvetica').text(rt.toFixed(2), 310, currentY + 3, { width: 34, align: 'right' });
-      doc.font('Helvetica-Bold').text(sv.toFixed(2), 346, currentY + 3, { width: 48, align: 'right' });
-      doc.font('Helvetica-Bold').fillColor('#059669').text(sa.toFixed(2), 396, currentY + 3, { width: 52, align: 'right' });
-      doc.font('Helvetica').fillColor('#64748b').text(exRate > 0 ? exRate.toFixed(2) : '-', 450, currentY + 3, { width: 34, align: 'right' });
-      doc.font('Helvetica').fillColor('#64748b').text(ex > 0 ? ex.toFixed(2) : '-', 486, currentY + 3, { width: 36, align: 'right' });
+      doc.text(String(r.brand?.serialNo || idx + 1), 38, currentY + 4, { width: 16 });
+      doc.font('Helvetica-Bold').text(brandName, 56, currentY + 4, { width: 96 });
+      doc.font('Helvetica').text(sizeName, 154, currentY + 4, { width: 54 });
+      doc.text(String(op), 210, currentY + 4, { width: 22, align: 'right' });
+      doc.text(String(ind), 234, currentY + 4, { width: 22, align: 'right' });
+      doc.text(String(tot), 258, currentY + 4, { width: 24, align: 'right' });
+      doc.text(String(cls), 284, currentY + 4, { width: 22, align: 'right' });
+      doc.font('Helvetica-Bold').text(String(sl), 308, currentY + 4, { width: 22, align: 'right' });
+      doc.font('Helvetica').text(rt.toFixed(2), 332, currentY + 4, { width: 36, align: 'right' });
+      doc.font('Helvetica-Bold').text(sv.toFixed(2), 370, currentY + 4, { width: 48, align: 'right' });
+      doc.font('Helvetica-Bold').fillColor('#059669').text(sa.toFixed(2), 420, currentY + 4, { width: 50, align: 'right' });
+      doc.font('Helvetica').fillColor('#64748b').text(exRate > 0 ? exRate.toFixed(2) : '-', 472, currentY + 4, { width: 36, align: 'right' });
+      doc.font('Helvetica').fillColor('#64748b').text(ex > 0 ? ex.toFixed(2) : '-', 510, currentY + 4, { width: 44, align: 'right' });
 
-      currentY += 13;
+      currentY += 15;
     });
   }
 

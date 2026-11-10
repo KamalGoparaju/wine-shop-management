@@ -40,18 +40,18 @@ const generateDailyStockPdf = (data, stream) => {
     const cols = [
       { text: 'S.No', x: 35, width: 22, align: 'left' },
       { text: 'Brand Name', x: 58, width: 130, align: 'left' },
-      { text: 'Size', x: 190, width: 34, align: 'left' },
-      { text: 'Opening', x: 226, width: 34, align: 'right' },
-      { text: 'Indent', x: 262, width: 34, align: 'right' },
-      { text: 'Total', x: 298, width: 34, align: 'right' },
-      { text: 'Closing', x: 334, width: 36, align: 'right' },
-      { text: 'Sale', x: 372, width: 32, align: 'right' },
-      { text: 'Rate (INR)', x: 406, width: 40, align: 'right' },
-      { text: 'Stock Value', x: 448, width: 68, align: 'right' },
-      { text: 'Sales Amount', x: 518, width: 72, align: 'right' },
-      { text: 'Extra/Btl', x: 592, width: 48, align: 'right' },
-      { text: 'Extra Amt', x: 642, width: 54, align: 'right' },
-      { text: 'Remaining Val', x: 698, width: 76, align: 'right' }
+      { text: 'Size', x: 190, width: 60, align: 'left' },
+      { text: 'Opening', x: 252, width: 34, align: 'right' },
+      { text: 'Indent', x: 288, width: 34, align: 'right' },
+      { text: 'Total', x: 324, width: 34, align: 'right' },
+      { text: 'Closing', x: 360, width: 36, align: 'right' },
+      { text: 'Sale', x: 398, width: 32, align: 'right' },
+      { text: 'Rate (INR)', x: 432, width: 40, align: 'right' },
+      { text: 'Stock Value', x: 474, width: 68, align: 'right' },
+      { text: 'Sales Amount', x: 544, width: 72, align: 'right' },
+      { text: 'Extra/Btl', x: 618, width: 48, align: 'right' },
+      { text: 'Extra Amt', x: 668, width: 54, align: 'right' },
+      { text: 'Remaining Val', x: 724, width: 76, align: 'right' }
     ];
 
     cols.forEach(col => {
@@ -177,28 +177,28 @@ const generateDailyStockPdf = (data, stream) => {
 
       // Render size and financial metrics
       doc.fillColor('#6b21a8').fontSize(7.5).font('Helvetica-Bold');
-      doc.text(sizeName, 190, tableY + 4, { width: 34, align: 'left' });
+      doc.text(sizeName, 190, tableY + 4, { width: 60, align: 'left' });
 
       doc.fillColor('#1e293b').fontSize(7.5).font('Helvetica');
-      doc.text(formatNumber(opening), 226, tableY + 4, { width: 34, align: 'right' });
-      doc.text(formatNumber(indent), 262, tableY + 4, { width: 34, align: 'right' });
-      doc.text(formatNumber(total), 298, tableY + 4, { width: 34, align: 'right' });
+      doc.text(formatNumber(opening), 252, tableY + 4, { width: 34, align: 'right' });
+      doc.text(formatNumber(indent), 288, tableY + 4, { width: 34, align: 'right' });
+      doc.text(formatNumber(total), 324, tableY + 4, { width: 34, align: 'right' });
       if (hasClosing) {
-        doc.text(formatNumber(closing), 334, tableY + 4, { width: 36, align: 'right' });
+        doc.text(formatNumber(closing), 360, tableY + 4, { width: 36, align: 'right' });
       } else {
-        doc.font('Helvetica-Oblique').fillColor('#b45309').text('Pending', 334, tableY + 4, { width: 36, align: 'right' });
+        doc.font('Helvetica-Oblique').fillColor('#b45309').text('Pending', 360, tableY + 4, { width: 36, align: 'right' });
         doc.font('Helvetica').fillColor('#1e293b');
       }
-      doc.font('Helvetica-Bold').text(formatNumber(sale), 372, tableY + 4, { width: 32, align: 'right' });
-      doc.font('Helvetica').text(rate.toFixed(2), 406, tableY + 4, { width: 40, align: 'right' });
-      doc.font('Helvetica-Bold').text(stockValue.toFixed(2), 448, tableY + 4, { width: 68, align: 'right' });
-      doc.font('Helvetica-Bold').fillColor('#059669').text(amount.toFixed(2), 518, tableY + 4, { width: 72, align: 'right' });
-      doc.font('Helvetica').fillColor('#64748b').text(extraPerBtl > 0 ? extraPerBtl.toFixed(2) : '-', 592, tableY + 4, { width: 48, align: 'right' });
-      doc.font('Helvetica').fillColor('#64748b').text(extra > 0 ? extra.toFixed(2) : '-', 642, tableY + 4, { width: 54, align: 'right' });
+      doc.font('Helvetica-Bold').text(formatNumber(sale), 398, tableY + 4, { width: 32, align: 'right' });
+      doc.font('Helvetica').text(rate.toFixed(2), 432, tableY + 4, { width: 40, align: 'right' });
+      doc.font('Helvetica-Bold').text(stockValue.toFixed(2), 474, tableY + 4, { width: 68, align: 'right' });
+      doc.font('Helvetica-Bold').fillColor('#059669').text(amount.toFixed(2), 544, tableY + 4, { width: 72, align: 'right' });
+      doc.font('Helvetica').fillColor('#64748b').text(extraPerBtl > 0 ? extraPerBtl.toFixed(2) : '-', 618, tableY + 4, { width: 48, align: 'right' });
+      doc.font('Helvetica').fillColor('#64748b').text(extra > 0 ? extra.toFixed(2) : '-', 668, tableY + 4, { width: 54, align: 'right' });
       if (hasClosing) {
-        doc.font('Helvetica-Bold').fillColor('#4338ca').text(remainingStockValue.toFixed(2), 698, tableY + 4, { width: 76, align: 'right' });
+        doc.font('Helvetica-Bold').fillColor('#4338ca').text(remainingStockValue.toFixed(2), 724, tableY + 4, { width: 76, align: 'right' });
       } else {
-        doc.font('Helvetica-Oblique').fillColor('#b45309').text('Pending', 698, tableY + 4, { width: 76, align: 'right' });
+        doc.font('Helvetica-Oblique').fillColor('#b45309').text('Pending', 724, tableY + 4, { width: 76, align: 'right' });
       }
 
       tableY += 16;
@@ -231,18 +231,18 @@ const generateDailyStockPdf = (data, stream) => {
   doc.rect(30, tableY + 21, 782, 1.5).fill('#334155');
 
   doc.fillColor('#ffffff').fontSize(7.5).font('Helvetica-Bold');
-  doc.text('DAILY TOTALS', 35, tableY + 6, { width: 190, align: 'left' });
-  doc.text(formatNumber(totalOpening), 226, tableY + 6, { width: 34, align: 'right' });
-  doc.text(formatNumber(totalIndent), 262, tableY + 6, { width: 34, align: 'right' });
-  doc.text(formatNumber(totalStock), 298, tableY + 6, { width: 34, align: 'right' });
-  doc.text(formatNumber(totalClosing), 334, tableY + 6, { width: 36, align: 'right' });
-  doc.text(formatNumber(totalSale), 372, tableY + 6, { width: 32, align: 'right' });
-  doc.text('-', 406, tableY + 6, { width: 40, align: 'right' });
-  doc.text(formatINR(totalStockValue), 448, tableY + 6, { width: 68, align: 'right' });
-  doc.text(formatINR(totalAmount), 518, tableY + 6, { width: 72, align: 'right' });
-  doc.text('-', 592, tableY + 6, { width: 48, align: 'right' });
-  doc.text(formatINR(totalExtra), 642, tableY + 6, { width: 54, align: 'right' });
-  doc.text(formatINR(totalRemainingStockValue), 698, tableY + 6, { width: 76, align: 'right' });
+  doc.text('DAILY TOTALS', 35, tableY + 6, { width: 215, align: 'left' });
+  doc.text(formatNumber(totalOpening), 252, tableY + 6, { width: 34, align: 'right' });
+  doc.text(formatNumber(totalIndent), 288, tableY + 6, { width: 34, align: 'right' });
+  doc.text(formatNumber(totalStock), 324, tableY + 6, { width: 34, align: 'right' });
+  doc.text(formatNumber(totalClosing), 360, tableY + 6, { width: 36, align: 'right' });
+  doc.text(formatNumber(totalSale), 398, tableY + 6, { width: 32, align: 'right' });
+  doc.text('-', 432, tableY + 6, { width: 40, align: 'right' });
+  doc.text(formatINR(totalStockValue), 474, tableY + 6, { width: 68, align: 'right' });
+  doc.text(formatINR(totalAmount), 544, tableY + 6, { width: 72, align: 'right' });
+  doc.text('-', 618, tableY + 6, { width: 48, align: 'right' });
+  doc.text(formatINR(totalExtra), 668, tableY + 6, { width: 54, align: 'right' });
+  doc.text(formatINR(totalRemainingStockValue), 724, tableY + 6, { width: 76, align: 'right' });
 
   tableY += 28;
 
