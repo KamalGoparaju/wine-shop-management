@@ -27,15 +27,15 @@ const ThemeSelector = ({ variant = 'card', className = '' }) => {
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
-          className="flex items-center gap-1.5 p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors border border-slate-200"
+          className="flex items-center gap-1 sm:gap-1.5 p-1.5 sm:p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors border border-slate-200 cursor-pointer shadow-2xs"
           title={`Theme: ${activeTheme.name}`}
           aria-label="Change application accent theme"
         >
           <div
-            className="w-4 h-4 rounded-full border border-white shadow-xs"
+            className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-white shadow-xs shrink-0"
             style={{ backgroundColor: activeTheme.primary }}
           />
-          <Palette className="w-4 h-4 text-slate-500" />
+          <Palette className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 hidden xs:inline shrink-0" />
         </button>
 
         {isOpen && (

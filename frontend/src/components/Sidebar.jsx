@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -23,6 +23,29 @@ import ThemeSelector from './ThemeSelector';
 const Sidebar = ({ isOpen = false, onClose }) => {
   const { user, logout, isAdmin, selectedShop } = useAuth();
   const { activeTheme } = useTheme();
+
+  // Close sidebar on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  // Lock body scroll on mobile when drawer is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -61,9 +84,9 @@ const Sidebar = ({ isOpen = false, onClose }) => {
       >
         {/* Brand Header */}
         <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between gap-3 bg-white">
-          <div className="flex items-center gap-3 overflow-hidden">
+          <NavLink to="/dashboard" onClick={handleNavClick} className="flex items-center gap-3 overflow-hidden group cursor-pointer">
             <div 
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-xs shrink-0 transition-colors"
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-xs shrink-0 transition-transform group-hover:scale-105"
               style={{ backgroundColor: activeTheme.primary }}
             >
               🍷
@@ -80,12 +103,13 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                 </p>
               )}
             </div>
-          </div>
+          </NavLink>
 
           {/* Close button visible only on mobile/tablet */}
           <button
+            type="button"
             onClick={onClose}
-            className="lg:hidden p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            className="lg:hidden p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             aria-label="Close navigation menu"
           >
             <X className="w-5 h-5" />

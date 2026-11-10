@@ -19,27 +19,32 @@ const Navbar = ({ title, onToggleSidebar }) => {
   };
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between text-slate-800 sticky top-0 z-30 shrink-0 shadow-xs">
-      <div className="flex items-center gap-2 sm:gap-4 overflow-hidden">
-        {/* Mobile Hamburger Menu Toggle */}
+    <header className="h-14 sm:h-16 bg-white border-b border-slate-200 px-2 sm:px-4 md:px-6 flex items-center justify-between text-slate-800 sticky top-0 z-30 shrink-0 shadow-xs gap-1.5 sm:gap-3">
+      {/* Left side: Hamburger Toggle (Mobile/Tablet) + Title (Desktop/Tablet) */}
+      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 md:flex-1 md:min-w-0">
+        {/* Mobile Hamburger Menu Toggle - NEVER shrunk, guaranteed visible on mobile & tablet */}
         <button
+          type="button"
           onClick={onToggleSidebar}
-          className="lg:hidden p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors shrink-0"
+          className="lg:hidden p-1.5 sm:p-2 rounded-xl text-slate-700 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all shrink-0 active:scale-95 shadow-2xs cursor-pointer"
           aria-label="Open navigation menu"
+          title="Open menu"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        <h2 className="text-sm sm:text-lg font-bold tracking-tight text-slate-900 truncate">
+        {/* Page Title: hidden on mobile to give room to shop & date controls, visible on md+ */}
+        <h2 className="text-sm sm:text-base md:text-lg font-bold tracking-tight text-slate-900 truncate hidden md:block">
           {title}
         </h2>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+      {/* Right side: Shop Selector + Global Business Date Picker + Theme Selector + Gateway Status */}
+      <div className="flex items-center gap-1 xs:gap-1.5 sm:gap-3 shrink-0">
         {/* Shop Selector Dropdown */}
         {shops && shops.length > 1 ? (
           <div
-            className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border rounded-xl px-2 sm:px-3 py-1 sm:py-1.5 shadow-xs max-w-[170px] sm:max-w-none transition-colors"
+            className="flex items-center gap-1 sm:gap-2 bg-slate-50 border rounded-xl px-1.5 sm:px-2.5 py-1 sm:py-1.5 shadow-2xs max-w-[110px] xs:max-w-[145px] sm:max-w-[190px] md:max-w-none transition-colors"
             style={{ borderColor: activeTheme.border }}
           >
             <Store
@@ -48,7 +53,7 @@ const Navbar = ({ title, onToggleSidebar }) => {
             />
             <div className="flex flex-col min-w-0">
               <span
-                className="text-[9px] font-bold uppercase tracking-wider leading-none hidden xs:inline"
+                className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider leading-none hidden sm:inline"
                 style={{ color: activeTheme.primary }}
               >
                 Active Shop
@@ -56,7 +61,7 @@ const Navbar = ({ title, onToggleSidebar }) => {
               <select
                 value={selectedShop?.id || ''}
                 onChange={handleShopChange}
-                className="bg-transparent text-slate-800 font-bold text-xs focus:outline-none cursor-pointer truncate pr-1"
+                className="bg-transparent text-slate-800 font-bold text-[11px] sm:text-xs focus:outline-none cursor-pointer truncate pr-0.5 sm:pr-1"
                 aria-label="Select active wine shop"
               >
                 {shops.map((shop) => (
@@ -68,12 +73,12 @@ const Navbar = ({ title, onToggleSidebar }) => {
             </div>
           </div>
         ) : selectedShop ? (
-          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs">
+          <div className="flex items-center gap-1 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 sm:px-2.5 py-1 sm:py-1.5 text-xs max-w-[110px] xs:max-w-[140px] sm:max-w-none">
             <Store
               className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
               style={{ color: activeTheme.primary }}
             />
-            <span className="font-semibold text-slate-800 truncate max-w-[120px] sm:max-w-none">
+            <span className="font-semibold text-slate-800 truncate text-[11px] sm:text-xs">
               {selectedShop.name}
             </span>
           </div>
@@ -81,7 +86,7 @@ const Navbar = ({ title, onToggleSidebar }) => {
 
         {/* Global Business Date Selector in Header */}
         <div
-          className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border rounded-xl px-2 sm:px-3 py-1 sm:py-1.5 shadow-xs transition-colors"
+          className="flex items-center gap-1 sm:gap-2 bg-slate-50 border rounded-xl px-1.5 sm:px-2.5 py-1 sm:py-1.5 shadow-2xs transition-colors"
           style={{ borderColor: activeTheme.border }}
         >
           <Calendar
@@ -91,7 +96,7 @@ const Navbar = ({ title, onToggleSidebar }) => {
           <div className="flex flex-col min-w-0">
             <div className="flex items-center justify-between gap-1">
               <span
-                className="text-[9px] font-bold uppercase tracking-wider leading-none hidden xs:inline"
+                className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider leading-none hidden sm:inline"
                 style={{ color: activeTheme.primary }}
               >
                 Date
@@ -100,7 +105,7 @@ const Navbar = ({ title, onToggleSidebar }) => {
                 <button
                   type="button"
                   onClick={resetToToday}
-                  className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors leading-none cursor-pointer"
+                  className="text-[8px] sm:text-[9px] font-bold px-1 sm:px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors leading-none cursor-pointer"
                   title="Jump to today"
                 >
                   Today
@@ -113,7 +118,7 @@ const Navbar = ({ title, onToggleSidebar }) => {
               onChange={(e) => {
                 if (e.target.value) setBusinessDate(e.target.value);
               }}
-              className="bg-transparent text-slate-800 font-bold text-xs focus:outline-none cursor-pointer w-[110px] sm:w-[125px]"
+              className="bg-transparent text-slate-800 font-bold text-[11px] sm:text-xs focus:outline-none cursor-pointer w-[95px] xs:w-[105px] sm:w-[125px]"
               aria-label="Select global business date"
             />
           </div>
