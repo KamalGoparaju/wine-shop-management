@@ -39,7 +39,7 @@ const generateClosingHistoryExcel = async (data, res) => {
   // Metadata
   historySheet.mergeCells('A2:O2');
   const metaCell = historySheet.getCell('A2');
-  metaCell.value = `Shop: ${shopName} (${shopCode})  |  Date Range: ${dateRangeLabel}  |  Generated: ${new Date().toLocaleString('en-IN')}`;
+  metaCell.value = `Shop: ${shopName} (${shopCode})  |  Date Range: ${dateRangeLabel}  |  Generated: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST`;
   metaCell.font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FFCBD5E1' } };
   metaCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
   metaCell.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -128,7 +128,7 @@ const generateClosingHistoryExcel = async (data, res) => {
       finalAmt,
       extra,
       r.closedBy || 'Manager',
-      r.closedAt ? new Date(r.closedAt).toLocaleString() : '-'
+      r.closedAt ? (new Date(r.closedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST') : '-'
     ]);
 
     row.height = 18;
@@ -273,7 +273,7 @@ const generateClosingHistoryExcel = async (data, res) => {
         e.recipient || '-',
         amt,
         e.createdBy || 'Staff',
-        e.createdAt ? new Date(e.createdAt).toLocaleString() : '-'
+        e.createdAt ? (new Date(e.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST') : '-'
       ]);
 
       const bg = idx % 2 === 0 ? 'FFF8FAFC' : 'FFFFFFFF';

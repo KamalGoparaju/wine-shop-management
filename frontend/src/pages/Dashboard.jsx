@@ -663,7 +663,7 @@ const Dashboard = () => {
                       <span>Business Day Closed & Books Sealed</span>
                     </div>
                     <p className="text-[11px] text-emerald-700">
-                      Closed on {new Date(savedClosing.closedAt).toLocaleString()} by <strong>{savedClosing.closedBy}</strong>.
+                      Closed on {new Date(savedClosing.closedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST by <strong>{savedClosing.closedBy}</strong>.
                     </p>
                   </div>
 

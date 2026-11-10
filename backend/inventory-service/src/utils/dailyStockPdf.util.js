@@ -30,7 +30,7 @@ const generateDailyStockPdf = (data, stream) => {
   } = data;
 
   const statusLabel = isLocked ? 'LOCKED' : (isCompleted ? 'COMPLETED' : 'DRAFT / INCOMPLETE');
-  const generatedAt = new Date().toLocaleString('en-IN', { timeZone: 'UTC' }) + ' UTC';
+  const generatedAt = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST';
 
   // Helper to draw table header
   const drawTableHeader = (startY) => {

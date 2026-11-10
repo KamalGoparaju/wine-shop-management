@@ -34,7 +34,7 @@ const generateDailyStockExcel = async (data, res) => {
   // 2. Metadata row
   worksheet.mergeCells('A2:Q2');
   const metaRow = worksheet.getCell('A2');
-  metaRow.value = `Shop: ${shopName} (${shopCode})  |  Business Date: ${businessDate}  |  Generated: ${new Date().toLocaleString('en-IN')}`;
+  metaRow.value = `Shop: ${shopName} (${shopCode})  |  Business Date: ${businessDate}  |  Generated: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST`;
   metaRow.font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FFCBD5E1' } };
   metaRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
   metaRow.alignment = { vertical: 'middle', horizontal: 'center' };

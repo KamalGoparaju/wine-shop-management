@@ -86,7 +86,7 @@ const exportClosingHistoryCSV = async (req, res, next) => {
       escapeCSV(parseFloat(r.finalAmount).toFixed(2)),
       escapeCSV(parseFloat(r.extraAmountInformational).toFixed(2)),
       escapeCSV(r.closedBy),
-      escapeCSV(new Date(r.closedAt).toLocaleString())
+      escapeCSV(r.closedAt ? (new Date(r.closedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST') : '-')
     ]);
 
     const csvContent = [headers.map(h => `"${h}"`).join(','), ...rows.map(r => r.join(','))].join('\r\n');
@@ -218,7 +218,7 @@ const exportExpensesCSV = async (req, res, next) => {
       escapeCSV(e.recipient || '-'),
       escapeCSV(parseFloat(e.amount).toFixed(2)),
       escapeCSV(e.createdBy),
-      escapeCSV(new Date(e.createdAt).toLocaleString())
+      escapeCSV(e.createdAt ? (new Date(e.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST') : '-')
     ]);
 
     const csvContent = [headers.map(h => `"${h}"`).join(','), ...rows.map(r => r.join(','))].join('\r\n');

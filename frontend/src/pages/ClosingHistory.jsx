@@ -710,7 +710,7 @@ const ClosingHistory = () => {
                   </span>
                 </div>
                 <div className="text-slate-500 text-[11px] font-mono">
-                  Closed on {new Date(selectedRecord.closedAt).toLocaleString()} by <strong className="text-slate-700">{selectedRecord.closedBy}</strong>
+                  Closed on {new Date(selectedRecord.closedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST by <strong className="text-slate-700">{selectedRecord.closedBy}</strong>
                 </div>
               </div>
 

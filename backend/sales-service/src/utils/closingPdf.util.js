@@ -30,7 +30,7 @@ const generateClosingReportPdf = (data, stream) => {
   } = data;
 
   const status = closing ? closing.status : 'UNCLOSED';
-  const generatedAt = new Date().toLocaleString('en-IN', { timeZone: 'UTC' }) + ' UTC';
+  const generatedAt = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST';
 
   // 1. Header Banner
   doc.rect(36, 30, 523, 50).fill('#0f172a');
@@ -138,8 +138,11 @@ const generateClosingReportPdf = (data, stream) => {
   // Closing Sign-off Audit details
   if (closing) {
     doc.rect(36, currentY, 523, 26).fill('#f8fafc').stroke('#e2e8f0');
+    const closedTime = closing.closedAt
+      ? (new Date(closing.closedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST')
+      : 'N/A';
     doc.fillColor('#334155').fontSize(7.5).font('Helvetica')
-       .text(`Closed By: ${closing.closedBy || 'Authorized Manager'}  |  Timestamp: ${new Date(closing.closedAt).toLocaleString()}`, 46, currentY + 5);
+       .text(`Closed By: ${closing.closedBy || 'Authorized Manager'}  |  Timestamp: ${closedTime}`, 46, currentY + 5);
     if (closing.notes) {
       doc.text(`Closing Notes: ${closing.notes}`, 46, currentY + 15);
     }
